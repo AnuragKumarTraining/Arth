@@ -29,7 +29,7 @@
 
 
 //     if (existingCustomer.length > 0) {
-      
+
 //       return;
 //     }
 //     // created hash password and hash otp.
@@ -110,7 +110,7 @@
 //         .update(pendingRegistrations)
 //         .set({ failedAttempts: record.failedAttempts + 1 })
 //         .where(eq(pendingRegistrations.email, email));
-        
+
 //       throw new AppError(407,'INVALID_OR_EXPIRED_OTP');
 //     }
 
@@ -198,7 +198,7 @@
 import crypto from 'crypto';
 import { eq, or } from 'drizzle-orm';
 import { db } from '../db';
-import { customers, pendingRegistrations } from '../db/schema';
+import { customers, accounts, pendingRegistrations } from '../db/schema';
 import { AppError } from '../error/AppError';
 import { emailService } from './email.services';
 import bcrypt from "bcrypt";
@@ -333,20 +333,20 @@ export class AuthService {
     if (!isOtpValid) {
       const nextAttemptCount = record.failedAttempts + 1;
       console.warn(`[AuthService:verifyAccount] Invalid OTP provided for: ${normalizedEmail}. Incrementing failed attempts to ${nextAttemptCount}`);
-      
+
       await db
         .update(pendingRegistrations)
         .set({ failedAttempts: nextAttemptCount })
         .where(eq(pendingRegistrations.email, normalizedEmail));
-        
+
       throw new AppError(400, 'INVALID_OR_EXPIRED_OTP');
     }
 
-    console.info(`[AuthService:verifyAccount] OTP valid. Executing customer creation transaction for: ${normalizedEmail}`);
-    
+    console.info(`[AuthService:verifyAccount] OTP valid. Executing customer & account creation transaction for: ${normalizedEmail}`);
+
     try {
       await db.transaction(async (tx) => {
-        await tx.insert(customers).values({
+        const [insertedCustomer] = await tx.insert(customers).values({
           email: record.email,
           passwordHash: record.password,
           firstName: record.firstName,
@@ -355,10 +355,22 @@ export class AuthService {
           phoneNumber: record.phoneNumber,
           nationalId: record.nationalId,
           address: record.address,
-          accountType: record.accountType,
           branchId: "ARTH001",
           isActive: false,
           kycStatus: 'PENDING_ADMIN_APPROVAL',
+        }).returning({ id: customers.id });
+
+        const accountNumber = '10' + Math.floor(1000000000 + Math.random() * 9000000000).toString();
+
+        await tx.insert(accounts).values({
+          accountNumber,
+          accountType: record.accountType.toUpperCase(),
+          balance: '0.00',
+          availableBalance: '0.00',
+          currency: 'INR',
+          customerId: insertedCustomer.id,
+          branchId: 'ARTH001',
+          status: 'ACTIVE',
         });
 
         await tx.delete(pendingRegistrations).where(eq(pendingRegistrations.email, normalizedEmail));
@@ -377,7 +389,7 @@ export class AuthService {
   }
 
   async resendOtp(input: ResendOtpInput): Promise<void> {
-    const {email}  = input;
+    const { email } = input;
     const normalizedEmail = email.trim().toLowerCase();
     console.info(`[AuthService:resendOtp] Resend request received for: ${normalizedEmail}`);
 

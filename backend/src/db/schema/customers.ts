@@ -1,6 +1,4 @@
-
-
-import { integer,pgTable, serial, varchar, text, date, timestamp, boolean, } from 'drizzle-orm/pg-core';
+import { pgTable, serial, varchar, text, date, timestamp, boolean } from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
 import { branches } from './branches';
 import { accounts } from './accounts';
@@ -17,26 +15,26 @@ export const customers = pgTable('customers', {
   phoneNumber: varchar('phone_number', { length: 20 }).notNull().unique(),
   nationalId: varchar('national_id', { length: 50 }).notNull().unique(),
   address: text('address').notNull(),
-  accountType: varchar('account_type', { length: 20 }).notNull(),
-  branchId: varchar('branch_id').notNull()
+  branchId: varchar('branch_id', { length: 20 })
+    .notNull()
     .references(() => branches.branchCode),
   // Banking status fields
   isActive: boolean('is_active').default(false).notNull(),
   kycStatus: varchar('kyc_status', { length: 30 }).default('PENDING_ADMIN_APPROVAL').notNull(),
-  
+
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
 });
 
-export const customerRelations = relations(customers,({one,many}) =>(
-    {
-    homeBranch: one(branches, {
+export const customerRelations = relations(customers, ({ one, many }) => ({
+  homeBranch: one(branches, {
     fields: [customers.branchId],
-    references: [branches.id],
+    references: [branches.branchCode],
   }),
   accounts: many(accounts),
-  authToken : many(authSessions),
+  authSessions: many(authSessions),
   beneficiaries: many(beneficiaries),
-    }
-))
+}));
+
 
 
