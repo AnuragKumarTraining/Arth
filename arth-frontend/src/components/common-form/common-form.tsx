@@ -8,20 +8,23 @@ const formTypes = {
     TEXTAREA: 'textarea'
 } as const;
 
-// 2. TypeScript Interfaces
 export interface OptionItem {
-    id: string | number;
-    label: string;
+  id: string | number;
+  label: string;
+  value?: string | number;
 }
 
 export interface FormElement {
-    name: string;
-    id: string;
-    placeholder?: string;
-    label: string;
-    componentType: 'input' | 'select' | 'textarea';
-    type?: string;
-    options?: OptionItem[]; // Used specifically when componentType is 'select'
+  name: string;
+  id: string;
+  placeholder?: string;
+  label: string;
+  componentType: 'input' | 'select' | 'textarea';
+  type?: string;
+  autoComplete?: string;
+  required?: boolean;
+  disabled?: boolean;
+  options?: OptionItem[]; // Used specifically when componentType is 'select'
 }
 
 interface CommonFormProps {

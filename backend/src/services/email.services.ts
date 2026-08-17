@@ -1,6 +1,7 @@
 
 import nodemailer from "nodemailer";
 import { env } from "../config/env";
+import { AccountDetailsEmailPayload } from "../types/accountDetailsEmailPayload";
 
 
 class EmailService{
@@ -34,6 +35,32 @@ class EmailService{
 
         await this.transporter.sendMail(mailOptions);
     }
+
+    async sendAccountDetails(payload:AccountDetailsEmailPayload){
+        console.log("Sending email")
+        const { to, firstName, customerId, accountNumber, accountType, branchCode } = payload;
+        const mailOptions = {
+        from : `"Arth" <${env.smtp_user}>`,
+            to,
+            subject : "Arth - Hulku re Account Activate Ho gya re!!!",
+        html:`
+        <>
+        <h2>Welcome to Your Banking Portal</h2>
+        <p>Hello ${firstName},</p>
+        <p>Your account has been verified and activated by our administration team. Here are your account details:</p>
+        <table style="border-collapse: collapse; width: 100%; max-width: 500px;">
+        <tr><td style="padding: 8px; border: 1px solid #ddd;"><strong>Customer ID:</strong></td><td style="padding: 8px; border: 1px solid #ddd;">${customerId}</td></tr>
+        <tr><td style="padding: 8px; border: 1px solid #ddd;"><strong>Account Number:</strong></td><td style="padding: 8px; border: 1px solid #ddd;">${accountNumber}</td></tr>
+        <tr><td style="padding: 8px; border: 1px solid #ddd;"><strong>Account Type:</strong></td><td style="padding: 8px; border: 1px solid #ddd;">${accountType.toUpperCase()}</td></tr>
+        <tr><td style="padding: 8px; border: 1px solid #ddd;"><strong>Branch Code:</strong></td><td style="padding: 8px; border: 1px solid #ddd;">${branchCode}</td></tr>
+        </table>
+         <p>You can now proceed to log in to your account.</p>
+        </>
+        `
+    }
+    await this.transporter.sendMail(mailOptions);
+    console.log('email sent')
+}
 }
 
 export const emailService = new EmailService();

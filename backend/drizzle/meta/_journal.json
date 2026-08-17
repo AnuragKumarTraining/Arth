@@ -5,22 +5,15 @@
     {
       "idx": 0,
       "version": "7",
-      "when": 1786606942510,
-      "tag": "0000_long_shard",
+      "when": 1786950644041,
+      "tag": "0000_slim_the_fury",
       "breakpoints": true
     },
     {
       "idx": 1,
       "version": "7",
-      "when": 1786635305203,
-      "tag": "0001_robust_lord_tyger",
-      "breakpoints": true
-    },
-    {
-      "idx": 2,
-      "version": "7",
-      "when": 1786898616327,
-      "tag": "0002_wet_firebrand",
+      "when": 1786963095538,
+      "tag": "0001_outgoing_komodo",
       "breakpoints": true
     }
   ]

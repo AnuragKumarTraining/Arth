@@ -5,3 +5,4 @@ export * from "./accounts"
 export * from "./beneficiary";
 export * from "./refreshTokenTable";
 export * from "./transaction";
+export * from "./admin"

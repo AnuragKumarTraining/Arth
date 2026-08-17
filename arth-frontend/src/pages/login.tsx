@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Navbar } from '../components/navbar';
 import CommonForm from '../components/common-form/common-form';
@@ -12,16 +12,16 @@ export default function Login() {
   const [isLoading, setIsLoading] = useState(false);
   const [globalError, setGlobalError] = useState('');
 
-  const handleLoginSubmit = async (event) => {
-    e.preventDefault();
+  const handleLoginSubmit = async (event:any) => {
+    event.preventDefault();
     setGlobalError('');
     setIsLoading(true);
 
     try {
-      // ⚠️ Awaiting Backend Phase 4 implementation
       const res = await fetch(`${API_BASE}/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify(formData),
       });
 

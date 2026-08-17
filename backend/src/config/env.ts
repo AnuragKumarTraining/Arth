@@ -18,6 +18,13 @@ export const env = {
     smtp_user : checkRequiredEnv("SMTP_USER"),
     smtp_pass : checkRequiredEnv("SMTP_PASS"),
     log_level : checkRequiredEnv("LOG_LEVEL"),
-    isProduction: checkRequiredEnv('NODE_ENV')
+    isProduction: checkRequiredEnv('NODE_ENV'),
+    key : checkRequiredEnv('jwt_secret'),
+    key_expiry : checkRequiredEnv('token_expiry'),
+    cookies : checkRequiredEnv('COOKIE_NAME'),
+    expire_cookie : checkRequiredEnv('EIGHT_HOURS_MS'),
+    admin: checkRequiredEnv('ADMIN_EMAIL'),
+    adminP : checkRequiredEnv('ADMIN_PASSWORD')
+
 
 }as const;

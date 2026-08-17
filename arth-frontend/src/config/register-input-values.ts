@@ -26,21 +26,23 @@ export const registerFormElements:FormElement[] = [
     type: "email"
   },
   {
-    name: "password",
-    id: "password",
-    placeholder: "Enter your password",
-    label: "Password",
-    componentType: "input",
-    type: "password"
-  },
-  {
-    name: "confirmPassword",
-    id: "confirmPassword",
-    placeholder: "Re-enter password",
-    label: "Confirm Password",
-    componentType: "input",
-    type: "password"
-  },
+  name: "password",
+  id: "password",
+  placeholder: "Enter your password",
+  label: "Password",
+  componentType: "input",
+  type: "password",
+  autoComplete: "new-password"
+},
+{
+  name: "confirmPassword",
+  id: "confirmPassword",
+  placeholder: "Re-enter password",
+  label: "Confirm Password",
+  componentType: "input",
+  type: "password",
+  autoComplete: "new-password"
+},
   {
     name: "dateOfBirth",
     id: "dateOfBirth",
