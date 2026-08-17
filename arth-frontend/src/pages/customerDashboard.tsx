@@ -28,28 +28,21 @@ interface Transaction {
   status: 'COMPLETED' | 'PENDING';
 }
 
-const API_BASE = 'http://localhost:5011/api';
+import { env } from '../config/env';
+
+const API_BASE = env.authBase;
 
 export default function CustomerDashboard() {
   const navigate = useNavigate();
   const [customer, setCustomer] = useState<CustomerProfile | null>(null);
+  const [account, setAccount] = useState<AccountDetails | null>(null);
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-
-  // Sample data fallback until backend account endpoints are wired
-  const [account] = useState<AccountDetails>({
-    accountNumber: 'ARTH-1029384756',
-    accountType: 'Savings Account',
-    balance: 145250.75,
-    branchCode: 'ARTH001',
-    ifscCode: 'ARTH0000001',
-  });
-
-  const [transactions] = useState<Transaction[]>([])
 
   useEffect(() => {
     const fetchSession = async () => {
       try {
-        const res = await fetch(`${API_BASE}/auth/me`, {
+        const res = await fetch(`${API_BASE}/me`, {
           method: 'GET',
           credentials: 'include',
         });
@@ -60,6 +53,12 @@ export default function CustomerDashboard() {
 
         const data = await res.json();
         setCustomer(data.customer);
+        if (data.account) {
+          setAccount(data.account);
+        }
+        if (data.transactions) {
+          setTransactions(data.transactions);
+        }
       } catch (err: any) {
         navigate('/login');
       } finally {
@@ -72,7 +71,7 @@ export default function CustomerDashboard() {
 
   const handleLogout = async () => {
     try {
-      await fetch(`${API_BASE}/auth/logout`, {
+      await fetch(`${API_BASE}/logout`, {
         method: 'POST',
         credentials: 'include',
       });
@@ -137,32 +136,32 @@ export default function CustomerDashboard() {
             <div className="flex items-center justify-between">
               <div>
                 <span className="text-xs uppercase tracking-wider font-semibold text-slate-500">
-                  {account.accountType}
+                  {account?.accountType || 'PRIMARY ACCOUNT'}
                 </span>
                 <p className="text-sm font-mono font-medium text-slate-800 mt-0.5">
-                  {account.accountNumber}
+                  {account?.accountNumber || 'Processing Account Number...'}
                 </p>
               </div>
               <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-800">
-                Active
+                {account?.status || 'Active'}
               </span>
             </div>
 
             <div>
               <span className="text-xs text-slate-500 font-medium">Available Balance</span>
               <div className="text-3xl sm:text-4xl font-bold text-slate-900 mt-1">
-                ₹{account.balance.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                ₹{(account?.balance ?? 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
               </div>
             </div>
 
             <div className="grid grid-cols-2 gap-4 pt-4 border-t border-slate-100 text-xs text-slate-600">
               <div>
                 <span className="text-slate-400 block">IFSC Code</span>
-                <span className="font-semibold text-slate-700 font-mono">{account.ifscCode}</span>
+                <span className="font-semibold text-slate-700 font-mono">{account?.ifscCode || 'ARTH0000001'}</span>
               </div>
               <div>
                 <span className="text-slate-400 block">Branch Code</span>
-                <span className="font-semibold text-slate-700 font-mono">{account.branchCode}</span>
+                <span className="font-semibold text-slate-700 font-mono">{account?.branchCode || 'ARTH001'}</span>
               </div>
             </div>
           </div>

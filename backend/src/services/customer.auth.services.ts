@@ -1,8 +1,8 @@
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
-import { eq } from 'drizzle-orm';
+import { eq, or, desc } from 'drizzle-orm';
 import { db } from '../db';
-import { customers } from '../db/schema';
+import { customers, accounts, branches, transactions } from '../db/schema';
 import { AppError } from '../error/AppError';
 import { env } from '../config/env';
 import { CustomerSessionPayload } from '../types/customerSession';
@@ -60,6 +60,89 @@ export class CustomerAuthService {
     });
 
     return { token, customer: customerPayload };
+  }
+
+  async getCustomerProfileAndAccount(customerId: number) {
+    const customerRecords = await db
+      .select()
+      .from(customers)
+      .where(eq(customers.id, customerId))
+      .limit(1);
+
+    if (customerRecords.length === 0) {
+      throw new AppError(404, 'Customer profile not found');
+    }
+
+    const customerRecord = customerRecords[0];
+
+    // Fetch linked bank account & branch metadata
+    const accountRecords = await db
+      .select({
+        id: accounts.id,
+        accountNumber: accounts.accountNumber,
+        accountType: accounts.accountType,
+        balance: accounts.balance,
+        availableBalance: accounts.availableBalance,
+        currency: accounts.currency,
+        status: accounts.status,
+        branchCode: accounts.branchId,
+        branchName: branches.branchName,
+        ifscCode: branches.ifscCode,
+      })
+      .from(accounts)
+      .leftJoin(branches, eq(accounts.branchId, branches.branchCode))
+      .where(eq(accounts.customerId, customerId))
+      .limit(1);
+
+    const account = accountRecords.length > 0 ? {
+      ...accountRecords[0],
+      balance: Number(accountRecords[0].balance),
+      availableBalance: Number(accountRecords[0].availableBalance),
+      ifscCode: accountRecords[0].ifscCode || 'ARTH0000001',
+    } : null;
+
+    // Fetch recent transactions
+    let txList: any[] = [];
+    if (account) {
+      const dbTransactions = await db
+        .select()
+        .from(transactions)
+        .where(
+          or(
+            eq(transactions.senderAccountId, account.id),
+            eq(transactions.receiverAccountId, account.id)
+          )
+        )
+        .orderBy(desc(transactions.createdAt))
+        .limit(10);
+
+      txList = dbTransactions.map(tx => ({
+        id: tx.id,
+        description: tx.description || `${tx.type} Transaction`,
+        date: new Date(tx.createdAt).toLocaleDateString('en-IN', {
+          day: '2-digit',
+          month: 'short',
+          year: 'numeric'
+        }),
+        type: tx.senderAccountId === account.id ? 'DEBIT' : 'CREDIT',
+        amount: Number(tx.amount),
+        status: tx.status,
+      }));
+    }
+
+    return {
+      customer: {
+        customerId: customerRecord.id,
+        email: customerRecord.email,
+        firstName: customerRecord.firstName,
+        lastName: customerRecord.lastName,
+        phoneNumber: customerRecord.phoneNumber,
+        kycStatus: customerRecord.kycStatus,
+        isActive: customerRecord.isActive,
+      },
+      account,
+      transactions: txList,
+    };
   }
 
   verifyToken(token: string): CustomerSessionPayload {

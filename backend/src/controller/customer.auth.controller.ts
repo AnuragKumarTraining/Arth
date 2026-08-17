@@ -29,10 +29,13 @@ export class CustomerAuthController {
 
   getMe = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
+      const data = await customerAuthService.getCustomerProfileAndAccount(req.customer!.customerId);
       res.status(200).json({
         success: true,
         authenticated: true,
-        customer: req.customer,
+        customer: data.customer,
+        account: data.account,
+        transactions: data.transactions,
       });
     } catch (error) {
       next(error);
