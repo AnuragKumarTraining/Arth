@@ -198,7 +198,7 @@
 import crypto from 'crypto';
 import { eq, or } from 'drizzle-orm';
 import { db } from '../db';
-import { customers, accounts, pendingRegistrations } from '../db/schema';
+import { customers, accounts, branches, pendingRegistrations } from '../db/schema';
 import { AppError } from '../error/AppError';
 import { emailService } from './email.services';
 import bcrypt from "bcrypt";
@@ -346,6 +346,22 @@ export class AuthService {
 
     try {
       await db.transaction(async (tx) => {
+        // Ensure default branch ARTH001 exists to avoid foreign key violation
+        const existingBranch = await tx
+          .select()
+          .from(branches)
+          .where(eq(branches.branchCode, 'ARTH001'))
+          .limit(1);
+
+        if (existingBranch.length === 0) {
+          await tx.insert(branches).values({
+            branchCode: 'ARTH001',
+            branchName: 'ARTH Main Branch',
+            ifscCode: 'ARTH0000001',
+            address: 'Headquarters, Main Branch',
+          });
+        }
+
         const [insertedCustomer] = await tx.insert(customers).values({
           email: record.email,
           passwordHash: record.password,

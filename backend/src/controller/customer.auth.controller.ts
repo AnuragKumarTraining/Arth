@@ -5,8 +5,9 @@ import { customerAuthService } from '../services/customer.auth.services';
 export class CustomerAuthController {
   login = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
-      const { email, password } = req.body;
-      const { token, customer } = await customerAuthService.authenticateCustomer(email, password);
+      const { email, customerId, identifier, password } = req.body;
+      const loginIdentifier = email || customerId || identifier;
+      const { token, customer } = await customerAuthService.authenticateCustomer(loginIdentifier, password);
 
       res.cookie(env.customerCookieName, token, {
         httpOnly: true,
@@ -40,6 +41,13 @@ export class CustomerAuthController {
 
   logout = async (_req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
+      res.cookie(env.customerCookieName, '', {
+        httpOnly: true,
+        secure: env.isProduction,
+        sameSite: 'lax',
+        expires: new Date(0),
+        path: '/',
+      });
       res.clearCookie(env.customerCookieName, {
         httpOnly: true,
         secure: env.isProduction,

@@ -3,8 +3,9 @@ import { useNavigate } from 'react-router-dom';
 import { Navbar } from '../components/navbar';
 import CommonForm from '../components/common-form/common-form';
 import { loginFormElements } from '../config';
+import { env } from '../config/env';
 
-const API_BASE = 'http://localhost:5011/api/auth';
+const API_BASE = env.authBase;
 
 export default function Login() {
   const navigate = useNavigate();
@@ -12,7 +13,7 @@ export default function Login() {
   const [isLoading, setIsLoading] = useState(false);
   const [globalError, setGlobalError] = useState('');
 
-  const handleLoginSubmit = async (event:any) => {
+  const handleLoginSubmit = async (event: any) => {
     event.preventDefault();
     setGlobalError('');
     setIsLoading(true);
@@ -28,12 +29,10 @@ export default function Login() {
       const data = await res.json();
 
       if (!res.ok) {
-        throw new Error(data.error || 'Invalid credentials or endpoint not implemented yet.');
+        throw new Error(data.message || data.error || 'Invalid credentials.');
       }
 
-      // TODO: Handle JWT storage here once Phase 4 is done
       navigate('/dashboard');
-      
     } catch (err: any) {
       setGlobalError(err.message);
     } finally {

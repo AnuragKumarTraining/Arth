@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { env } from '../config/env';
 
 export default function AdminLogin() {
   const [email, setEmail] = useState('');
@@ -6,13 +7,13 @@ export default function AdminLogin() {
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleSubmit = async (event:any) => {
+  const handleSubmit = async (event: any) => {
     event.preventDefault();
     setError('');
     setIsSubmitting(true);
 
     try {
-      const res = await fetch('http://localhost:5011/api/admin/login', {
+      const res = await fetch(`${env.adminBase}/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include', // Ensures the response cookie is stored

@@ -61,6 +61,13 @@ class AdminController {
 
   logout = async (_req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
+      res.cookie(env.adminCookieName, '', {
+        httpOnly: true,
+        secure: env.isProduction,
+        sameSite: 'lax',
+        expires: new Date(0),
+        path: '/',
+      });
       res.clearCookie(env.adminCookieName, {
         httpOnly: true,
         secure: env.isProduction,

@@ -1,14 +1,14 @@
 import type { FormElement } from "../components/common-form/common-form";
 
-export const loginFormElements : FormElement[] = [
+export const loginFormElements: FormElement[] = [
   {
-  name: "customerId",
-  id: "customerId",
-  placeholder: "Enter your Customer ID (e.g. CUST007)",
-  label: "Customer ID",
-  componentType: "input",
-  type: "text"
-},
+    name: "email",
+    id: "email",
+    placeholder: "Enter your Email or Customer ID",
+    label: "Email / Customer ID",
+    componentType: "input",
+    type: "text"
+  },
   {
     name: "password",
     id: "password",

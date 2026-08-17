@@ -17,7 +17,7 @@ export const AdminAuthProvider = ({ children }) => {
   useEffect(() => {
     const checkAuth = async () => {
       try {
-        const res = await fetch("http://localhost:5011/api/admin/me", {
+        const res = await fetch(`${env.adminBase}/me`, {
           method: 'GET',
           credentials: 'include',
         });
@@ -39,7 +39,7 @@ export const AdminAuthProvider = ({ children }) => {
   }, []);
 
   const logout = async () => {
-    await fetch('http://localhost:5011/api/admin/logout', {
+    await fetch(`${env.adminBase}/logout`, {
       method: 'POST',
       credentials: 'include',
     });

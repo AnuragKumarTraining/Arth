@@ -3,14 +3,15 @@ import { eq } from 'drizzle-orm';
 import { db } from '..';
 import { admins } from '../schema/admin';
 import { env } from '../../config/env';
+
 const SALT_ROUNDS = 12;
 
 async function seedAdmin() {
   const email = env.admin?.toLowerCase().trim();
-  const rawPassword = env.adminP
+  const rawPassword = env.adminP;
 
   if (!email || !rawPassword) {
-    console.error('Error: ADMIN_DEFAULT_EMAIL and ADMIN_DEFAULT_PASSWORD must be defined in .env');
+    console.error('Error: ADMIN_EMAIL and ADMIN_PASSWORD must be defined in .env');
     process.exit(1);
   }
 

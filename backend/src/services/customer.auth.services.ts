@@ -9,21 +9,28 @@ import { CustomerSessionPayload } from '../types/customerSession';
 
 export class CustomerAuthService {
   async authenticateCustomer(
-    email: string,
+    loginIdentifier: string,
     plainPassword: string
   ): Promise<{ token: string; customer: CustomerSessionPayload}> {
-    if (!email || !plainPassword) {
-      throw new AppError(400, 'Email and password are required');
+    if (!loginIdentifier || !plainPassword) {
+      throw new AppError(400, 'Email / Customer ID and password are required');
     }
+
+    const query = loginIdentifier.toString().trim().toLowerCase();
+    const isNumericId = /^\d+$/.test(query);
 
     const records = await db
       .select()
       .from(customers)
-      .where(eq(customers.email, email.toLowerCase().trim()))
+      .where(
+        isNumericId
+          ? eq(customers.id, Number(query))
+          : eq(customers.email, query)
+      )
       .limit(1);
 
     if (records.length === 0) {
-      throw new AppError(401, 'Invalid email or password');
+      throw new AppError(401, 'Invalid email/Customer ID or password');
     }
 
     const customerRecord = records[0];
