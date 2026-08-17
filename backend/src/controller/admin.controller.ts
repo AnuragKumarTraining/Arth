@@ -2,9 +2,7 @@ import { Request, Response, NextFunction } from 'express';
 import { updateAccountInput } from '../validator/admin.validator';
 import { adminService } from '../services/admin.service';
 import { adminAuthService } from '../services/admin.auth.services';
-
-const COOKIE_NAME = 'admin_token';
-const EIGHT_HOURS_MS = 8 * 60 * 60 * 1000;
+import { env } from '../config/env';
 
 class AdminController {
   getUsers = async (req: Request, res: Response, next: NextFunction) => {
@@ -31,12 +29,11 @@ class AdminController {
       const { email, password } = req.body;
       const { token, admin } = await adminAuthService.authenticateAdmin(email, password);
 
-      // Pass token as 2nd argument, options as 3rd argument
-      res.cookie(COOKIE_NAME, token, {
+      res.cookie(env.adminCookieName, token, {
         httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
+        secure: env.isProduction,
         sameSite: 'lax',
-        maxAge: EIGHT_HOURS_MS,
+        maxAge: env.expire_cookie,
         path: '/',
       });
 
@@ -64,9 +61,9 @@ class AdminController {
 
   logout = async (_req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
-      res.clearCookie(COOKIE_NAME, {
+      res.clearCookie(env.adminCookieName, {
         httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
+        secure: env.isProduction,
         sameSite: 'lax',
         path: '/',
       });

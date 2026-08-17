@@ -32,8 +32,8 @@ export const createAccountSchema = z.object({
     .string( 'Address is required' )
     .trim(),
 
-  accountType: z.enum(['savings', 'checking', 'salary'], 
-    { message: 'Account type must be savings, checking, or salary' }),
+  accountType: z.enum(['savings', 'checking', 'salary', 'current'], 
+    { message: 'Account type must be savings, checking, current, or salary' }),
 })
 
 export const verifyAccountSchema = z.object({

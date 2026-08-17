@@ -2,20 +2,17 @@ import { Request, Response, NextFunction } from 'express';
 import { env } from '../config/env';
 import { customerAuthService } from '../services/customer.auth.services';
 
-const COOKIE_NAME = 'customer_token';
-const DEFAULT_MAX_AGE = 8 * 60 * 60 * 1000; // 8 hours in ms
-
 export class CustomerAuthController {
   login = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const { email, password } = req.body;
       const { token, customer } = await customerAuthService.authenticateCustomer(email, password);
 
-      res.cookie(COOKIE_NAME, token, {
+      res.cookie(env.customerCookieName, token, {
         httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
+        secure: env.isProduction,
         sameSite: 'lax',
-        maxAge: Number(env.expire_cookie) || DEFAULT_MAX_AGE,
+        maxAge: env.expire_cookie,
         path: '/',
       });
 
@@ -43,9 +40,9 @@ export class CustomerAuthController {
 
   logout = async (_req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
-      res.clearCookie(COOKIE_NAME, {
+      res.clearCookie(env.customerCookieName, {
         httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
+        secure: env.isProduction,
         sameSite: 'lax',
         path: '/',
       });

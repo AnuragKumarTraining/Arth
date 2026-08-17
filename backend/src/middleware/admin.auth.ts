@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { AppError } from '../error/AppError';
+import { env } from '../config/env';
 import { AdminSessionPayload } from '../types/adminSessionPayload';
 import { adminAuthService } from '../services/admin.auth.services';
 
@@ -13,7 +14,7 @@ declare global {
 
 export const requireAdminAuth = (req: Request, _res: Response, next: NextFunction): void => {
   try {
-    const token = req.cookies?.admin_token;
+    const token = req.cookies?.[env.adminCookieName];
 
     if (!token) {
       throw new AppError(401, 'No active administrative session found');

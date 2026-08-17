@@ -4,11 +4,8 @@ import { eq } from 'drizzle-orm';
 import { db } from '../db';
 import { admins } from '../db/schema/admin';
 import { AppError } from '../error/AppError';
+import { env } from '../config/env';
 import { AdminSessionPayload } from '../types/adminSessionPayload';
-
-// Hardcoded secret and expiry for development
-const JWT_ADMIN_SECRET = 'admin_token';
-const TOKEN_EXPIRY = '8h';
 
 export class AdminAuthService {
   async authenticateAdmin(
@@ -42,8 +39,8 @@ export class AdminAuthService {
       role: 'admin',
     };
 
-    const token = jwt.sign(adminPayload, JWT_ADMIN_SECRET, {
-      expiresIn: TOKEN_EXPIRY,
+    const token = jwt.sign(adminPayload, env.adminJwtSecret, {
+      expiresIn: env.key_expiry,
     });
 
     return { token, admin: adminPayload };
@@ -51,7 +48,7 @@ export class AdminAuthService {
 
   verifyToken(token: string): AdminSessionPayload {
     try {
-      const decoded = jwt.verify(token, JWT_ADMIN_SECRET) as AdminSessionPayload;
+      const decoded = jwt.verify(token, env.adminJwtSecret) as AdminSessionPayload;
       if (decoded.role !== 'admin') {
         throw new AppError(403, 'Forbidden: Insufficient privileges');
       }

@@ -4,8 +4,6 @@ import { env } from '../config/env';
 import { CustomerSessionPayload } from '../types/customerSession';
 import { customerAuthService } from '../services/customer.auth.services';
 
-const CUSTOMER_COOKIE_NAME = 'customer_token';
-
 declare global {
   namespace Express {
     interface Request {
@@ -16,7 +14,7 @@ declare global {
 
 export const requireCustomerAuth = (req: Request, _res: Response, next: NextFunction): void => {
   try {
-    const token = req.cookies?.[CUSTOMER_COOKIE_NAME];
+    const token = req.cookies?.[env.customerCookieName];
 
     if (!token) {
       throw new AppError(401, 'Authentication required. No active customer session.');

@@ -35,12 +35,8 @@ export default function Register() {
     } 
     setIsLoading(true);
 
-     
     try {
-      const payload = {
-        ...formData,
-        branchId: Number(formData.branchId),
-      };
+      const { confirmPassword, ...payload } = formData;
 
       const res = await fetch(`${API_BASE}/createAccount`, {
         method: 'POST',

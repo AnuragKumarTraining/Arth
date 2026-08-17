@@ -80,10 +80,10 @@ export const registerFormElements:FormElement[] = [
     id: "accountType",
     label: "Account Type",
     componentType: "select",
-    // Options array specifically for select components
     options: [
       { id: "savings", label: "Savings Account" },
-      { id: "current", label: "Current Account" }
+      { id: "checking", label: "Checking / Current Account" },
+      { id: "salary", label: "Salary Account" }
     ]
   },
   {
@@ -92,8 +92,7 @@ export const registerFormElements:FormElement[] = [
     label: "Branch",
     componentType: "select",
     options: [
-      // Mapped to the integer 1 that we seeded in the Postgres DB earlier
-      { id: 1, label: "ARTH001" } 
+      { id: "ARTH001", label: "ARTH001 - Main Branch" } 
     ]
   }
 ];

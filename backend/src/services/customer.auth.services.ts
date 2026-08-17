@@ -1,15 +1,11 @@
 import bcrypt from 'bcrypt';
-import jwt, { type SignOptions } from 'jsonwebtoken';
+import jwt from 'jsonwebtoken';
 import { eq } from 'drizzle-orm';
 import { db } from '../db';
 import { customers } from '../db/schema';
 import { AppError } from '../error/AppError';
 import { env } from '../config/env';
 import { CustomerSessionPayload } from '../types/customerSession';
-
-
-const JWT_CUSTOMER_SECRET: jwt.Secret = 'customer-fallback-secret';
-const TOKEN_EXPIRY = '3m' as SignOptions['expiresIn'];
 
 export class CustomerAuthService {
   async authenticateCustomer(
@@ -52,8 +48,8 @@ export class CustomerAuthService {
       isActive: customerRecord.isActive,
     };
 
-    const token = jwt.sign(customerPayload, JWT_CUSTOMER_SECRET, {
-      expiresIn: TOKEN_EXPIRY,
+    const token = jwt.sign(customerPayload, env.accessToken, {
+      expiresIn: env.key_expiry,
     });
 
     return { token, customer: customerPayload };
@@ -61,7 +57,7 @@ export class CustomerAuthService {
 
   verifyToken(token: string): CustomerSessionPayload {
     try {
-      const decoded = jwt.verify(token, JWT_CUSTOMER_SECRET) as CustomerSessionPayload;
+      const decoded = jwt.verify(token, env.accessToken) as CustomerSessionPayload;
       if (decoded.role !== 'customer') {
         throw new AppError(403, 'Forbidden: Insufficient privileges');
       }

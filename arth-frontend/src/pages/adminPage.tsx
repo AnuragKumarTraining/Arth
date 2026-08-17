@@ -4,7 +4,7 @@ import type { CustomerAccount } from '../config/admin-input';
 import { env } from '../config/env';
 
 
-const base = env.adminBase;
+const base = "http://localhost:5011/api/admin";
 
 export default function AdminDashboard() {
   const [usersList, setUsersList] = useState<CustomerAccount[]>([]);
@@ -14,7 +14,9 @@ export default function AdminDashboard() {
 
   const fetchUsers = async () => {
     try {
-      const res = await fetch(`${base}/users`);
+      const res = await fetch(`${base}/users`, {
+        credentials: 'include',
+      });
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || 'Failed to fetch users');
       setUsersList(data.users || []);
@@ -37,7 +39,8 @@ export default function AdminDashboard() {
       const res = await fetch(`${base}/users/status`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId, kycStatus, isActive }),
+        credentials: 'include',
+        body: JSON.stringify({ userId: Number(userId), kycStatus, isActive }),
       });
 
       const data = await res.json();
@@ -78,9 +81,8 @@ export default function AdminDashboard() {
 
         {feedback && (
           <div
-            className={`p-3 mb-4 rounded-md text-sm border ${
-              feedback.isError ? 'bg-red-50 text-red-700 border-red-200' : 'bg-green-50 text-green-700 border-green-200'
-            }`}
+            className={`p-3 mb-4 rounded-md text-sm border ${feedback.isError ? 'bg-red-50 text-red-700 border-red-200' : 'bg-green-50 text-green-700 border-green-200'
+              }`}
           >
             {feedback.message}
           </div>
@@ -139,9 +141,8 @@ export default function AdminDashboard() {
                     </td>
                     <td className="px-4 py-4 text-sm">
                       <span
-                        className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
-                          user.isActive ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
-                        }`}
+                        className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${user.isActive ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
+                          }`}
                       >
                         {user.isActive ? 'Active' : 'Inactive'}
                       </span>
@@ -156,11 +157,10 @@ export default function AdminDashboard() {
                             !user.isActive
                           )
                         }
-                        className={`px-3 py-1 text-xs font-medium rounded border ${
-                          user.isActive
+                        className={`px-3 py-1 text-xs font-medium rounded border ${user.isActive
                             ? 'border-red-300 text-red-700 hover:bg-red-50'
                             : 'border-green-300 text-green-700 hover:bg-green-50'
-                        } disabled:opacity-50`}
+                          } disabled:opacity-50`}
                       >
                         {updatingId === user.id ? 'Updating...' : user.isActive ? 'Deactivate' : 'Verify & Activate'}
                       </button>
