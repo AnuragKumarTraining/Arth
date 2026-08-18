@@ -1,200 +1,3 @@
-// import crypto from 'crypto';
-// import { eq } from 'drizzle-orm';
-// import { db } from '../db';
-// import { customers, pendingRegistrations } from '../db/schema';
-// import { CreateAccountRequest, VerifyAccountInput } from '../types';
-// import { AppError } from '../error/AppError';
-// import { emailService } from './email.services';
-// import bcrypt from "bcrypt";
-
-// export class AuthService {
-//     async initiateSignup(input: CreateAccountRequest): Promise<void> {
-//     const {
-//       email,
-//       password,
-//       firstName,
-//       lastName,
-//       dateOfBirth,
-//       phoneNumber,
-//       nationalId,
-//       address,
-//       accountType,
-//     } = input;
-
-//     const existingCustomer = await db
-//       .select({ id: customers.id })
-//       .from(customers)
-//       .where(eq(customers.email, email))
-//       .limit(1);
-
-
-//     if (existingCustomer.length > 0) {
-
-//       return;
-//     }
-//     // created hash password and hash otp.
-//     const hashedPassword = await bcrypt.hash(password, 12);
-//     const rawOtp = crypto.randomInt(100000, 999999).toString();
-//     const hashedOtp = crypto.createHash('sha256').update(rawOtp).digest('hex');
-
-//     //otp expiry setup
-//     const now = new Date();
-//     const resendAvailableAt = new Date(now.getTime() + 59 * 1000); // 59 seconds
-//     const expiresAt = new Date(now.getTime() + 3 * 60 * 1000);    // 3 minutes
-
-//     const registrationData = {
-//       email,
-//       password: hashedPassword,
-//       firstName,
-//       lastName,
-//       dateOfBirth : new Date(dateOfBirth),
-//       phoneNumber,
-//       nationalId,
-//       address,
-//       accountType,
-//       hashedOtp,
-//       failedAttempts: 0,
-//       resendAvailableAt,
-//       expiresAt,
-//     };
-
-//     // Upsert into pending_registrations table
-//     await db
-//       .insert(pendingRegistrations)
-//       .values(registrationData)
-//       .onConflictDoUpdate({
-//         target: pendingRegistrations.email,
-//         set: {
-//           ...registrationData,
-//           createdAt: new Date(),
-//         },
-//       });
-
-//     //send rawotp to email.
-//     await emailService.sendOtpEmail(email, rawOtp);
-//   }
-
-//     // verify email using otp.
-//     async verifyAccount(input: VerifyAccountInput): Promise<void> {
-//     const { email, otp } = input;
-
-//     const pendingRecords = await db
-//       .select()
-//       .from(pendingRegistrations)
-//       .where(eq(pendingRegistrations.email, email))
-//       .limit(1);
-
-//     if (pendingRecords.length === 0) {
-//       throw new AppError(403,'INVALID_OR_EXPIRED_OTP');
-//     }
-
-//     const record = pendingRecords[0];
-
-//     if (new Date() > record.expiresAt) {
-//       await db.delete(pendingRegistrations).where(eq(pendingRegistrations.email, email));
-//       throw new Error('INVALID_OR_EXPIRED_OTP');
-//     }
-
-//     if (record.failedAttempts >= 3) {
-//       await db.delete(pendingRegistrations).where(eq(pendingRegistrations.email, email));
-//       throw new Error('maximum_attempt_reached');
-//     }
-
-//     const hashedInputOtp = crypto.createHash('sha256').update(otp).digest('hex');
-//     const inputBuffer = Buffer.from(hashedInputOtp, 'hex');
-//     const storedBuffer = Buffer.from(record.hashedOtp, 'hex');
-//     const isOtpValid = inputBuffer.length === storedBuffer.length && crypto.timingSafeEqual(inputBuffer, storedBuffer);
-
-//     if (!isOtpValid) {
-//       await db
-//         .update(pendingRegistrations)
-//         .set({ failedAttempts: record.failedAttempts + 1 })
-//         .where(eq(pendingRegistrations.email, email));
-
-//       throw new AppError(407,'INVALID_OR_EXPIRED_OTP');
-//     }
-
-//     await db.transaction(async (tx) => {
-//       await tx.insert(customers).values({
-//         email: record.email,
-//         passwordHash: record.password,
-//         firstName: record.firstName,
-//         lastName: record.lastName,
-//         dateOfBirth: record.dateOfBirth,
-//         phoneNumber: record.phoneNumber,
-//         nationalId: record.nationalId,
-//         address: record.address,
-//         accountType: record.accountType,
-//         branchId:"ARTH001",
-//         isActive: false, // Disabled until admin approval
-//         kycStatus: 'PENDING_ADMIN_APPROVAL',
-//       });
-
-//       await tx.delete(pendingRegistrations).where(eq(pendingRegistrations.email, email));
-//     });
-//   }
-
-//   async resendOtp(email: string){
-//     const normalizedEmail = email.trim().toLowerCase();
-//     const pendingRecords = await db
-//       .select()
-//       .from(pendingRegistrations)
-//       .where(eq(pendingRegistrations.email, normalizedEmail))
-//       .limit(1);
-
-//     if (pendingRecords.length === 0) {
-//       return;
-//     }
-
-//     const record = pendingRecords[0];
-//     const now = new Date();
-
-//     // 59-second check
-//     if (now < record.resendAvailableAt) {
-//       const retryAfterSeconds = Math.ceil(
-//         (record.resendAvailableAt.getTime() - now.getTime()) / 1000
-//       );
-//       throw new AppError(
-//         429,
-//         `Please wait ${retryAfterSeconds} second(s) before requesting a new code.`
-//       );
-//     }
-
-//     // Generate new raw OTP and its hash
-//     const rawOtp = crypto.randomInt(100000, 999999).toString();
-//     const hashedOtp = crypto.createHash('sha256').update(rawOtp).digest('hex');
-
-//     //  Calculated new timestamps 
-//     const resendAvailableAt = new Date(now.getTime() + 59 * 1000);
-//     const expiresAt = new Date(now.getTime() + 3 * 60 * 1000);
-
-//     await db
-//       .update(pendingRegistrations)
-//       .set({
-//         hashedOtp,
-//         failedAttempts: 0,
-//         resendAvailableAt,
-//         expiresAt,
-//         createdAt: now,
-//       })
-//       .where(eq(pendingRegistrations.email, normalizedEmail));
-
-//     // Sent the new OTP via email
-//     await emailService.sendOtpEmail(normalizedEmail, rawOtp);
-//   }
-// }
-
-// export const authService = new AuthService();
-
-// // jargon ---> upsert.
-
-
-
-
-
-
-
-
 import crypto from 'crypto';
 import { eq, or } from 'drizzle-orm';
 import { db } from '../db';
@@ -309,7 +112,7 @@ export class AuthService {
 
     const record = pendingRecords[0];
 
-    // Expiration check via epoch ms
+    // Expiration check
     const nowMs = Date.now();
     const expiresAtMs = new Date(record.expiresAt).getTime();
 
@@ -346,7 +149,7 @@ export class AuthService {
 
     try {
       await db.transaction(async (tx) => {
-        // Ensure default branch ARTH001 exists to avoid foreign key violation
+        // defualt branch set to ARTH001 to avoid foreign key conflict.
         const existingBranch = await tx
           .select()
           .from(branches)
@@ -422,7 +225,6 @@ export class AuthService {
 
     const record = pendingRecords[0];
     const now = new Date();
-
     if (now < record.resendAvailableAt) {
       const retryAfterSeconds = Math.ceil(
         (record.resendAvailableAt.getTime() - now.getTime()) / 1000
@@ -433,14 +235,11 @@ export class AuthService {
         `Please wait ${retryAfterSeconds} second(s) before requesting a new code.`
       );
     }
-
     console.info(`[AuthService:resendOtp] Generating new OTP and resetting timers for: ${normalizedEmail}`);
     const rawOtp = crypto.randomInt(100000, 999999).toString();
     const hashedOtp = crypto.createHash('sha256').update(rawOtp).digest('hex');
-
     const resendAvailableAt = new Date(now.getTime() + 59 * 1000);
     const expiresAt = new Date(now.getTime() + 3 * 60 * 1000);
-
     await db
       .update(pendingRegistrations)
       .set({
@@ -459,3 +258,5 @@ export class AuthService {
 }
 
 export const authService = new AuthService();
+
+// // jargon ---> upsert.

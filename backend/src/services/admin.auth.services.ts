@@ -50,11 +50,11 @@ export class AdminAuthService {
     try {
       const decoded = jwt.verify(token, env.adminJwtSecret) as AdminSessionPayload;
       if (decoded.role !== 'admin') {
-        throw new AppError(403, 'Forbidden: Insufficient privileges');
+        throw new AppError(403, `Forbidden: Please don't do this`);
       }
       return decoded;
     } catch (err) {
-      throw new AppError(401, 'Invalid or expired administrative session');
+      throw new AppError(401, 'Invalid session');
     }
   }
 }

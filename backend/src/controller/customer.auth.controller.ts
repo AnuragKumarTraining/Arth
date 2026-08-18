@@ -11,7 +11,6 @@ export class CustomerAuthController {
 
       res.cookie(env.customerCookieName, token, {
         httpOnly: true,
-        secure: env.isProduction,
         sameSite: 'lax',
         maxAge: env.expire_cookie,
         path: '/',
@@ -46,14 +45,12 @@ export class CustomerAuthController {
     try {
       res.cookie(env.customerCookieName, '', {
         httpOnly: true,
-        secure: env.isProduction,
         sameSite: 'lax',
         expires: new Date(0),
         path: '/',
       });
       res.clearCookie(env.customerCookieName, {
         httpOnly: true,
-        secure: env.isProduction,
         sameSite: 'lax',
         path: '/',
       });

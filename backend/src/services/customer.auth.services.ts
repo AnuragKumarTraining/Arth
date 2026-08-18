@@ -40,7 +40,7 @@ export class CustomerAuthService {
       throw new AppError(401, 'Invalid email or password');
     }
 
-    // Optional Check: Restrict access if the customer account is deactivated
+    //Restricted access if the customer account is deactivated
     if (!customerRecord.isActive) {
       throw new AppError(403, 'Account is inactive. Please contact customer support.');
     }
@@ -75,7 +75,7 @@ export class CustomerAuthService {
 
     const customerRecord = customerRecords[0];
 
-    // Fetch linked bank account & branch metadata
+    // Fetch linked bank account and setails
     const accountRecords = await db
       .select({
         id: accounts.id,

@@ -1,9 +1,6 @@
-
 import nodemailer from "nodemailer";
 import { env } from "../config/env";
 import { AccountDetailsEmailPayload } from "../types/accountDetailsEmailPayload";
-
-
 class EmailService{
     private transporter = nodemailer.createTransport({
         host : env.host!,

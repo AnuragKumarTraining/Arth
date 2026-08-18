@@ -59,7 +59,7 @@ export class AdminService {
       })
       .where(eq(customers.id, userId));
 
-    // If transitioned to active with verified KYC, send account details
+    // send account details if verified.
     if (wasInactive && isActive && kycStatus === 'verified' && account) {
       await emailService.sendAccountDetails({
         to: user.email,

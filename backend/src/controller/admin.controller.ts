@@ -31,7 +31,6 @@ class AdminController {
 
       res.cookie(env.adminCookieName, token, {
         httpOnly: true,
-        secure: env.isProduction,
         sameSite: 'lax',
         maxAge: env.expire_cookie,
         path: '/',
@@ -63,14 +62,12 @@ class AdminController {
     try {
       res.cookie(env.adminCookieName, '', {
         httpOnly: true,
-        secure: env.isProduction,
         sameSite: 'lax',
         expires: new Date(0),
         path: '/',
       });
       res.clearCookie(env.adminCookieName, {
         httpOnly: true,
-        secure: env.isProduction,
         sameSite: 'lax',
         path: '/',
       });
