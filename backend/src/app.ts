@@ -1,6 +1,6 @@
 
 import express from "express";
-import { cookieParser } from "./middleware/cookieParser";
+import cookieParser from "cookie-parser";
 import { apiRouter } from "./routes";
 import { errorHandler } from "./middleware/errorHandler";
 import cors from "cors";
@@ -8,7 +8,7 @@ import cors from "cors";
 export function createApp(){
     const app = express();
     app.use(express.json());
-    app.use(cookieParser);
+    app.use(cookieParser());
     app.use(cors({
         origin: 'http://localhost:5173',
         credentials: true,

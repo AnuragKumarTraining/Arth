@@ -25,5 +25,6 @@ export const env = {
     customerCookieName: getEnv('CUSTOMER_COOKIE_NAME'),
     expire_cookie: Number(getEnv('EIGHT_HOURS_MS')),
     admin: getEnv('ADMIN_EMAIL'),
-    adminP: getEnv('ADMIN_PASSWORD')
+    adminP: getEnv('ADMIN_PASSWORD'),
+    isProduction: process.env.NODE_ENV === 'production',
 } as const;
