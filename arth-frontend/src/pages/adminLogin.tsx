@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { env } from '../config/env';
 
-export default function AdminLogin() {
+export default function StaffLogin() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -38,7 +38,7 @@ export default function AdminLogin() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-slate-900 px-4">
       <div className="w-full max-w-md rounded-lg bg-white p-8 shadow-md">
-        <h2 className="text-2xl font-bold text-slate-800">Admin Portal</h2>
+        <h2 className="text-2xl font-bold text-slate-800">Arth Staff Portal</h2>
         <p className="mb-6 text-sm text-slate-500">Sign in to manage banking operations</p>
 
         {error && (

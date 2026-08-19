@@ -14,7 +14,6 @@ try {
     };
   }
 } catch {
-  // pino-pretty is not installed, fallback to default Pino logger
 }
 
 export const logger = pino({

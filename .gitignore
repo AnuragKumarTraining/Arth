@@ -10,6 +10,7 @@ lerna-debug.log*
 node_modules
 dist
 .env
+admin
 erdiagram.xml
 dist-ssr
 *.local
