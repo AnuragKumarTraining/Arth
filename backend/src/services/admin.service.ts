@@ -220,7 +220,7 @@ export class AdminService {
           availableBalance: newBalance, 
           updatedAt: new Date() 
         })
-        .where(eq(accounts.id, accountId));
+        .where(eq(accounts.customerId, accountId));
 
       // 5. Create the Transaction Ledger Record
       const referenceNumber = `TRF-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
@@ -230,7 +230,7 @@ export class AdminService {
         .values({
           referenceNumber,
           idempotencyKey: randomUUID(), // Prevents duplicate network retries
-          senderAccountId: accountId,
+          senderAccountId: account.id,
           externalAccountNumber: beneficiary.accountNumber,
           externalRoutingCode: beneficiary.ifscCode,
           externalBankName: beneficiary.bankName,
