@@ -55,7 +55,7 @@ export class CustomerAuthService {
       isActive: customerRecord.isActive,
     };
 
-    const token = jwt.sign(customerPayload, env.accessToken, {
+    const token = jwt.sign(customerPayload, env.adminJwtSecret, {
       expiresIn: env.key_expiry,
     });
 
@@ -147,7 +147,7 @@ export class CustomerAuthService {
 
   verifyToken(token: string): CustomerSessionPayload {
     try {
-      const decoded = jwt.verify(token, env.accessToken) as CustomerSessionPayload;
+      const decoded = jwt.verify(token, env.adminJwtSecret) as CustomerSessionPayload;
       if (decoded.role !== 'customer') {
         throw new AppError(403, 'Forbidden: Insufficient privileges');
       }

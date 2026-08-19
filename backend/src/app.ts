@@ -1,9 +1,8 @@
-
 import express from "express";
-import cookieParser from "cookie-parser";
 import { apiRouter } from "./routes";
 import { errorHandler } from "./middleware/errorHandler";
 import cors from "cors";
+import cookieParser from "cookie-parser";
 
 export function createApp(){
     const app = express();

@@ -13,5 +13,5 @@ authRouter.post('/verify-account',validate(verifyAccountSchema),authController.v
 authRouter.post("/resendOtp",validate(resendOtpSchema),authController.resendOtp)
 
 authRouter.post('/login', customerAuthController.login);
-authRouter.get('/me', requireCustomerAuth, customerAuthController.getMe);
+// authRouter.get('/me', requireCustomerAuth, customerAuthController);
 authRouter.post('/logout', requireCustomerAuth, customerAuthController.logout);
