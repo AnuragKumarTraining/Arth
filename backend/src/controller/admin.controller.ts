@@ -171,8 +171,17 @@ class AdminController {
       next(error);
     }
   };
-  transactions = async(req: Request, res: Response, next: NextFunction)=>{
-  }
+  getAllTransactions = async (_req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const data = await adminService.getAllTransactions();
+      res.status(200).json({
+        success: true,
+        transactions: data,
+      });
+    } catch (error) {
+      next(error);
+    }
+  };
 
   // Add this method inside BankingController class
 addBeneficiary = async (req: Request, res: Response, next: NextFunction): Promise<void> => {

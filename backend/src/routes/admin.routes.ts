@@ -17,5 +17,5 @@ adminRouter.post('/logout', requireAdminAuth, adminController.logout);
 adminRouter.get('/accounts/:id', requireAdminAuth, adminController.getAccountById);
 adminRouter.get('/accounts/:id/beneficiaries', requireAdminAuth, adminController.getBeneficiaries);
 adminRouter.post('/accounts/:id/transfer', requireAdminAuth, adminController.transferToBeneficiary);
-adminRouter.post('/accounts/transactions' , requireAdminAuth,adminController.transactions);
+adminRouter.get('/transactions', requireAdminAuth, adminController.getAllTransactions);
 adminRouter.post('/accounts/:id/beneficiaries', requireAdminAuth, adminController.addBeneficiary);

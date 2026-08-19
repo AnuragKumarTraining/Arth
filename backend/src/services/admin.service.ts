@@ -4,7 +4,8 @@ import { customers, accounts, branches, transactions, beneficiaries } from '../d
 import { AppError } from '../error/AppError';
 import { emailService } from './email.services';
 import { updateAccountInput} from '../validator/admin.validator';;
-import { eq, or, desc, and} from 'drizzle-orm';
+import { eq, or, desc, and } from 'drizzle-orm';
+import { alias } from 'drizzle-orm/pg-core';
 import { randomUUID } from 'node:crypto';
 export class AdminService {
   async listUsers() {
@@ -211,7 +212,7 @@ export class AdminService {
         throw new AppError(403, 'Cannot transfer to an unverified beneficiary');
       }
 
-      // 4. Deduct the balances
+      // 4. Deduct the balances from sender's account
       const newBalance = (currentBalance - amount).toFixed(2);
       await tx
         .update(accounts)
@@ -222,7 +223,35 @@ export class AdminService {
         })
         .where(eq(accounts.customerId, accountId));
 
-      // 5. Create the Transaction Ledger Record
+      // 5. If transfer is to someone inside the same bank, credit their account
+      const [receiverAccount] = await tx
+        .select()
+        .from(accounts)
+        .where(eq(accounts.accountNumber, beneficiary.accountNumber))
+        .for('update');
+
+      let receiverAccountId: number | null = null;
+
+      if (receiverAccount) {
+        if (receiverAccount.id === account.id) {
+          throw new AppError(400, 'Cannot transfer money to the same account');
+        }
+
+        receiverAccountId = receiverAccount.id;
+        const receiverCurrentBalance = parseFloat(receiverAccount.balance);
+        const receiverNewBalance = (receiverCurrentBalance + amount).toFixed(2);
+
+        await tx
+          .update(accounts)
+          .set({
+            balance: receiverNewBalance,
+            availableBalance: receiverNewBalance,
+            updatedAt: new Date(),
+          })
+          .where(eq(accounts.id, receiverAccount.id));
+      }
+
+      // 6. Create the Transaction Ledger Record
       const referenceNumber = `TRF-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
       
       const [txn] = await tx
@@ -231,6 +260,7 @@ export class AdminService {
           referenceNumber,
           idempotencyKey: randomUUID(), // Prevents duplicate network retries
           senderAccountId: account.id,
+          receiverAccountId: receiverAccountId, // Link receiver account ID if internal
           externalAccountNumber: beneficiary.accountNumber,
           externalRoutingCode: beneficiary.ifscCode,
           externalBankName: beneficiary.bankName,
@@ -269,6 +299,72 @@ async addBeneficiary(accountId: number, dto: { name: string; accountNumber: stri
 
   return newBeneficiary;
 }
+
+  async getAllTransactions() {
+    const senderAcc = alias(accounts, 'sender_acc');
+    const receiverAcc = alias(accounts, 'receiver_acc');
+    const senderCust = alias(customers, 'sender_cust');
+    const receiverCust = alias(customers, 'receiver_cust');
+
+    const rawTransactions = await db
+      .select({
+        id: transactions.id,
+        referenceNumber: transactions.referenceNumber,
+        idempotencyKey: transactions.idempotencyKey,
+        senderAccountId: transactions.senderAccountId,
+        senderAccountNumber: senderAcc.accountNumber,
+        senderFirstName: senderCust.firstName,
+        senderLastName: senderCust.lastName,
+        receiverAccountId: transactions.receiverAccountId,
+        receiverAccountNumber: receiverAcc.accountNumber,
+        receiverFirstName: receiverCust.firstName,
+        receiverLastName: receiverCust.lastName,
+        externalAccountNumber: transactions.externalAccountNumber,
+        externalRoutingCode: transactions.externalRoutingCode,
+        externalBankName: transactions.externalBankName,
+        amount: transactions.amount,
+        feeAmount: transactions.feeAmount,
+        currency: transactions.currency,
+        type: transactions.type,
+        status: transactions.status,
+        failureReason: transactions.failureReason,
+        description: transactions.description,
+        createdAt: transactions.createdAt,
+        completedAt: transactions.completedAt,
+      })
+      .from(transactions)
+      .leftJoin(senderAcc, eq(transactions.senderAccountId, senderAcc.id))
+      .leftJoin(senderCust, eq(senderAcc.customerId, senderCust.id))
+      .leftJoin(receiverAcc, eq(transactions.receiverAccountId, receiverAcc.id))
+      .leftJoin(receiverCust, eq(receiverAcc.customerId, receiverCust.id))
+      .orderBy(desc(transactions.createdAt));
+
+    return rawTransactions.map((tx) => ({
+      id: tx.id,
+      referenceNumber: tx.referenceNumber,
+      idempotencyKey: tx.idempotencyKey,
+      senderAccountId: tx.senderAccountId,
+      senderAccountNumber: tx.senderAccountNumber || 'N/A',
+      senderName: tx.senderFirstName ? `${tx.senderFirstName} ${tx.senderLastName || ''}`.trim() : 'N/A',
+      receiverAccountId: tx.receiverAccountId,
+      receiverAccountNumber: tx.receiverAccountNumber || tx.externalAccountNumber || 'N/A',
+      receiverName: tx.receiverFirstName
+        ? `${tx.receiverFirstName} ${tx.receiverLastName || ''}`.trim()
+        : (tx.externalBankName ? `External (${tx.externalBankName})` : (tx.externalAccountNumber ? `Ext Acc: ${tx.externalAccountNumber}` : 'N/A')),
+      externalAccountNumber: tx.externalAccountNumber,
+      externalRoutingCode: tx.externalRoutingCode,
+      externalBankName: tx.externalBankName,
+      amount: Number(tx.amount),
+      feeAmount: Number(tx.feeAmount || 0),
+      currency: tx.currency,
+      type: tx.type,
+      status: tx.status,
+      failureReason: tx.failureReason,
+      description: tx.description,
+      createdAt: tx.createdAt,
+      completedAt: tx.completedAt,
+    }));
+  }
 }
 
 export const adminService = new AdminService();
