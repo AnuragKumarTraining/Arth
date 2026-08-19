@@ -6,6 +6,7 @@ import CustomerDashboard from './pages/customerDashboard'
 import StaffLogin from './pages/adminLogin'
 import AdminDashboard from './pages/adminPage'
 import KYC from './pages/kyc'
+import Transactions from './pages/transaction'
 import ProtectedAdminRoute from './routes/protectAdminRoutes'
 
 
@@ -38,7 +39,8 @@ function App() {
         {path :"/admin/kyc",element : <KYC/>},
         { path: 'accounts/:id', element: <CustomerDashboard /> },
         {path : "/admin/open-account",element : <Register/>},
-        // {path: "/transactions", element : <Transactions/>},
+        { path: "/admin/transactions", element: <Transactions /> },
+        { path: "transactions", element: <Transactions /> },
       ],
     },
     {
