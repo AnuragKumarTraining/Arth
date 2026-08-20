@@ -5,6 +5,8 @@ import { env } from '../config/env';
 import type { AccountDetails, CustomerProfile } from '../config/customer-input';
 import type { Transaction } from '../config/transaction';
 import { TransferModal } from '../components/Modals/transferModal';
+import { DepositModal } from '../components/Modals/depositModal';
+import { WithdrawModal } from '../components/Modals/withdrawModal';
 
 const API_BASE = env.adminBase;
 
@@ -19,7 +21,10 @@ export default function CustomerDashboard() {
 
   // Modal State
   const [isTransferModalOpen, setIsTransferModalOpen] = useState(false);
+  const [isDepositModalOpen, setIsDepositModalOpen] = useState(false);
+  const [isWithdrawModalOpen, setIsWithdrawModalOpen] = useState(false);
   const [beneficiaries, setBeneficiaries] = useState<any[]>([]);
+
 
   // --- RESTORED: Search & Pagination State ---
   const [searchQuery, setSearchQuery] = useState('');
@@ -27,6 +32,14 @@ export default function CustomerDashboard() {
   const ITEMS_PER_PAGE = 5;
 
   // Extracted fetch function so it can be reused after a transfer
+
+
+const handleDeposit = async() =>{
+       setIsDepositModalOpen(true);
+  };
+const handleWithdraw = async() =>{
+  setIsWithdrawModalOpen(true);
+}
   const fetchAccountData = useCallback(async () => {
     try {
       const res = await fetch(`${API_BASE}/accounts/${id}`, {
@@ -43,7 +56,7 @@ export default function CustomerDashboard() {
       if (data.account) setAccount(data.account);
       if (data.transactions) setTransactions(data.transactions);
     } catch (err: any) {
-      navigate('/login');
+      navigate('/admin/login');
     } finally {
       setIsLoading(false);
     }
@@ -103,7 +116,7 @@ export default function CustomerDashboard() {
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
             <h1 className="text-2xl sm:text-3xl font-bold text-slate-900">
-              Welcome back, {customer?.firstName || 'User'}
+             {customer?.firstName || 'User'} {customer?.lastName || 'User'} 
             </h1>
             <p className="text-sm text-slate-600 mt-1">
               Customer ID: #{customer?.customerId} &bull; {customer?.email}
@@ -159,27 +172,60 @@ export default function CustomerDashboard() {
             </div>
           </div>
 
-          <div className="p-6 sm:p-8 bg-white border border-slate-200 rounded-xl shadow-sm flex flex-col justify-between space-y-4">
-            <h3 className="text-base font-semibold text-slate-900">Quick Actions</h3>
-            <div className="space-y-3">
-              <button 
-                onClick={handleOpenTransfer}
-                className="w-full py-2.5 px-4 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors"
-              >
-                Transfer Money
-              </button>
-              <button className="w-full py-2.5 px-4 text-sm font-medium text-slate-700 bg-slate-100 rounded-lg hover:bg-slate-200 transition-colors">
-                Download Statement
-              </button>
-              <button className="w-full py-2.5 px-4 text-sm font-medium text-slate-700 bg-slate-100 rounded-lg hover:bg-slate-200 transition-colors">
-                Account Settings
-              </button>
-            </div>
-            <p className="text-xs text-slate-400 text-center">
-              24x7 Virtual Banking Protected
-            </p>
-          </div>
-        </div>
+          {/* Quick Actions */}
+<div className="p-6 sm:p-8 bg-white border border-slate-200 rounded-xl shadow-sm flex flex-col justify-between space-y-4">
+  <h3 className="text-base font-semibold text-slate-900">Quick Actions</h3>
+
+  <div className="space-y-3">
+    {/* Transfer Money */}
+    <button
+      onClick={handleOpenTransfer}
+      className="w-full py-2.5 px-4 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors"
+    >
+      Transfer Money
+    </button>
+
+    {/* Deposit & Withdraw */}
+    <div className="grid grid-cols-2 gap-3">
+      <button
+        onClick={handleDeposit}
+        type="button"
+        className="w-full py-2.5 px-4 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors"
+      >
+        Deposit
+      </button>
+
+      <button
+        onClick={handleWithdraw}
+        type="button"
+        className="w-full py-2.5 px-4 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors"
+      >
+        Withdraw
+      </button>
+    </div>
+
+    {/* Existing secondary actions */}
+    <button
+  type="button"
+  onClick={() => navigate(`/admin/accounts/${id}/statement`)}
+  className="w-full py-2.5 px-4 text-sm font-medium text-slate-700 bg-slate-100 rounded-lg hover:bg-slate-200 transition-colors"
+>
+  Download Statement
+</button>
+
+    <button
+      type="button"
+      className="w-full py-2.5 px-4 text-sm font-medium text-slate-700 bg-slate-100 rounded-lg hover:bg-slate-200 transition-colors"
+    >
+      Account Settings
+    </button>
+  </div>
+
+  <p className="text-xs text-slate-400 text-center">
+    24x7 Virtual Banking Protected
+  </p>
+</div>        
+</div>
 
         {/* --- RESTORED: Recent Transactions Section --- */}
         <div className="p-6 sm:p-8 bg-white border border-slate-200 rounded-xl shadow-sm">
@@ -283,7 +329,18 @@ export default function CustomerDashboard() {
   accountId={id}
   onSuccess={fetchAccountData}
 />
-
-    </div>
-  );
+<DepositModal
+  isOpen={isDepositModalOpen}
+  onClose={() => setIsDepositModalOpen(false)}
+  accountId={id}
+  onSuccess={fetchAccountData}
+/>
+<WithdrawModal
+  isOpen={isWithdrawModalOpen}
+  onClose={() => setIsWithdrawModalOpen(false)}
+  accountId={id}
+  onSuccess={fetchAccountData}
+/>
+</div>
+);
 }

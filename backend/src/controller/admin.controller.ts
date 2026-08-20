@@ -3,9 +3,8 @@ import { updateAccountInput } from '../validator/admin.validator';
 import { adminService } from '../services/admin.service';
 import { adminAuthService } from '../services/admin.auth.services';
 import { env } from '../config/env';
-import { customerAuthService } from '../services/customer.auth.services';
-import { authService } from '../services/auth.service';
 import { AppError } from '../error/AppError';
+import { emailService } from '../services/email.services';
 
 class AdminController {
   getUsers = async (req: Request, res: Response, next: NextFunction) => {
@@ -183,7 +182,6 @@ class AdminController {
     }
   };
 
-  // Add this method inside BankingController class
 addBeneficiary = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
      const rawaccountId = req.params.id;
@@ -213,6 +211,242 @@ addBeneficiary = async (req: Request, res: Response, next: NextFunction): Promis
     res.status(201).json({ success: true, beneficiary });
   } catch (error) {
     next(error);
+  }
+};
+
+createDeposit = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const rawAccountId = req.params.id;
+
+    if (typeof rawAccountId !== 'string') {
+      res.status(400).json({
+        success: false,
+        message: 'Invalid account ID',
+      });
+      return;
+    }
+
+    const accountId = Number.parseInt(rawAccountId, 10);
+
+    if (!Number.isInteger(accountId) || accountId <= 0) {
+      res.status(400).json({
+        success: false,
+        message: 'Invalid account ID',
+      });
+      return;
+    }
+
+    const { amount, description } = req.body;
+
+    if (
+      amount === undefined ||
+      amount === null ||
+      typeof amount !== 'number' ||
+      !Number.isFinite(amount) ||
+      amount <= 0
+    ) {
+      res.status(400).json({
+        success: false,
+        message: 'Amount must be a positive number',
+      });
+      return;
+    }
+
+    const result = await adminService.createDeposit({
+      accountId,
+      amount,
+      description,
+    });
+
+    res.status(201).json({
+      success: true,
+      message: 'Deposit completed successfully',
+      transaction: result.transaction,
+      account: result.account,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+createWithdraw = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const rawAccountId = req.params.id;
+
+    if (typeof rawAccountId !== 'string') {
+      res.status(400).json({
+        success: false,
+        message: 'Invalid account ID',
+      });
+      return;
+    }
+
+    const accountId = Number.parseInt(rawAccountId, 10);
+
+    if (!Number.isInteger(accountId) || accountId <= 0) {
+      res.status(400).json({
+        success: false,
+        message: 'Invalid account ID',
+      });
+      return;
+    }
+
+    const { amount, description } = req.body;
+
+    if (
+      amount === undefined ||
+      amount === null ||
+      typeof amount !== 'number' ||
+      !Number.isFinite(amount) ||
+      amount <= 0
+    ) {
+      res.status(400).json({
+        success: false,
+        message: 'Amount must be a positive number',
+      });
+      return;
+    }
+
+    if (
+      description !== undefined &&
+      typeof description !== 'string'
+    ) {
+      res.status(400).json({
+        success: false,
+        message: 'Description must be a string',
+      });
+      return;
+    }
+
+    const result = await adminService.createWithdraw({
+      accountId,
+      amount,
+      description,
+    });
+
+    res.status(201).json({
+      success: true,
+      message: 'Withdrawal completed successfully',
+      transaction: result.transaction,
+      account: result.account,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+downloadStatement = async (req: Request, res: Response) => {
+  try {
+    const { customerId } = req.params;
+
+    if (typeof customerId !== 'string') {
+      res.status(400).json({
+        success: false,
+        message: 'Invalid account ID',
+      });
+      return;
+    }
+
+    const { from, to, format = 'pdf' } = req.query;
+
+    if (typeof from !== 'string' || typeof to !== 'string') {
+      res.status(400).json({
+        success: false,
+        message: 'From and to dates are required',
+      });
+      return;
+    }
+
+    if (format !== 'pdf') {
+      res.status(400).json({
+        success: false,
+        message: 'Only PDF format is currently supported',
+      });
+      return;
+    }
+
+    const statement = await adminService.generateStatement({
+      customerId,
+      from,
+      to,
+      format: 'pdf',
+    });
+
+    res.setHeader('Content-Type', 'application/pdf');
+
+    res.setHeader(
+      'Content-Disposition',
+      `attachment; filename="statement-${customerId}-${from}-to-${to}.pdf"`,
+    );
+
+    res.send(statement);
+  } catch (error) {
+    console.error('Statement download error:', error);
+
+    res.status(500).json({
+      success: false,
+      message: 'Failed to generate statement',
+    });
+  }
+};
+
+getStatementPreview = async (req: Request, res: Response) => {
+  try {
+    const { customerId} = req.params;
+
+    if (
+      typeof customerId !== 'string' ||
+      !/^\d+$/.test(customerId)
+    ) {
+      res.status(400).json({
+        success: false,
+        message: 'Invalid customer ID',
+      });
+      return;
+    }
+
+    const { from, to } = req.query;
+
+    if (
+      typeof from !== 'string' ||
+      typeof to !== 'string'
+    ) {
+      res.status(400).json({
+        success: false,
+        message: 'From and to dates are required',
+      });
+      return;
+    }
+
+    const statement = await adminService.getStatementData({
+      customerId,
+      from,
+      to,
+    });
+
+    res.status(200).json({
+      success: true,
+      statement,
+    });
+  } catch (error) {
+    console.error('Statement preview error:', error);
+
+    const message =
+      error instanceof Error
+        ? error.message
+        : 'Failed to load statement';
+
+    res.status(400).json({
+      success: false,
+      message,
+    });
   }
 };
 }

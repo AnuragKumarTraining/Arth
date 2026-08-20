@@ -51,7 +51,7 @@ export const Navbar: React.FC = () => {
             KYC
           </Link>
           <Link
-            to="/admin/kyc"
+            to="/admin/collectors"
             className={`text-sm font-medium transition-colors ${
               isActive('/admin/collectors')
                 ? 'text-white font-semibold'

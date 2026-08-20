@@ -1,12 +1,15 @@
-
+import type { Request, Response } from 'express';
 import { db } from '../db';
 import { customers, accounts, branches, transactions, beneficiaries } from '../db/schema';
 import { AppError } from '../error/AppError';
 import { emailService } from './email.services';
 import { updateAccountInput} from '../validator/admin.validator';;
-import { eq, or, desc, and } from 'drizzle-orm';
+import { eq, or, desc, and,sql, lt, gte, lte, asc } from 'drizzle-orm';
 import { alias } from 'drizzle-orm/pg-core';
 import { randomUUID } from 'node:crypto';
+import { PDFDocument, StandardFonts, rgb } from 'pdf-lib';
+import { GenerateStatementParams, GetStatementDataParams, StatementData, StatementTransaction } from '../types/statements.types';
+import { generateStatementPdf } from './statement.pdf.service';
 export class AdminService {
   async listUsers() {
     return await db
@@ -181,7 +184,7 @@ export class AdminService {
     if (amount <= 0) throw new AppError(400, 'Transfer amount must be greater than zero');
 
     return await db.transaction(async (tx) => {
-      // 1. Lock the sender's account to prevent concurrent withdrawal race conditions
+      //Locked the sender's account to prevent concurrent withdrawal race conditions
       const [account] = await tx
         .select()
         .from(accounts)
@@ -191,13 +194,13 @@ export class AdminService {
       if (!account) throw new AppError(404, 'Source account not found');
       if (account.status !== 'ACTIVE') throw new AppError(403, 'Account is not active');
 
-      // 2. Validate sufficient funds
+      //Validate sufficient funds
       const currentBalance = parseFloat(account.balance);
       if (currentBalance < amount) {
         throw new AppError(400, `Insufficient funds. Available: ₹${currentBalance.toFixed(2)}`);
       }
 
-      // 3. Verify the beneficiary exists and belongs to this customer
+      //Verify the beneficiary exists and belongs to this customer
       const [beneficiary] = await tx
         .select()
         .from(beneficiaries)
@@ -212,7 +215,7 @@ export class AdminService {
         throw new AppError(403, 'Cannot transfer to an unverified beneficiary');
       }
 
-      // 4. Deduct the balances from sender's account
+      //Deducting the balances from sender's account
       const newBalance = (currentBalance - amount).toFixed(2);
       await tx
         .update(accounts)
@@ -223,7 +226,7 @@ export class AdminService {
         })
         .where(eq(accounts.customerId, accountId));
 
-      // 5. If transfer is to someone inside the same bank, credit their account
+      // if transfer is made to anyone inside the same bank, credited their account
       const [receiverAccount] = await tx
         .select()
         .from(accounts)
@@ -251,7 +254,7 @@ export class AdminService {
           .where(eq(accounts.id, receiverAccount.id));
       }
 
-      // 6. Create the Transaction Ledger Record
+      // Transaction Ledger Record
       const referenceNumber = `TRF-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
       
       const [txn] = await tx
@@ -275,7 +278,7 @@ export class AdminService {
       return { transaction: txn, newBalance };
     });
   }
-  // Add this method inside BankingService class
+
 async addBeneficiary(accountId: number, dto: { name: string; accountNumber: string; ifscCode: string; bankName: string }) {
   const [account] = await db
     .select({ customerId: accounts.customerId })
@@ -365,6 +368,404 @@ async addBeneficiary(accountId: number, dto: { name: string; accountNumber: stri
       completedAt: tx.completedAt,
     }));
   }
+
+
+  // deposit
+
+  createDeposit = async ({
+  accountId,
+  amount,
+  description,
+}: {
+  accountId: number;
+  amount: number;
+  description?: string;
+}) => {
+  const result =  await db.transaction(async (tx) => {
+    const accountResult = await tx
+      .select()
+      .from(accounts)
+      .where(eq(accounts.customerId, accountId))
+      .limit(1);
+
+    const account = accountResult[0];
+const customerResult = await tx
+  .select()
+  .from(customers)
+  .where(eq(customers.id, accountId))
+  .limit(1);
+
+    const customer = customerResult[0];
+
+    if (!account) {
+      throw new Error('Account not found');
+    }
+
+    if (account.status !== 'ACTIVE') {
+      throw new Error('Account is not active');
+    }
+
+    const referenceNumber = `DEP-${crypto.randomUUID()}`;
+
+    const transactionResult = await tx
+      .insert(transactions)
+      .values({
+        referenceNumber,
+        senderAccountId: null,
+        receiverAccountId: account.id,
+        amount: amount.toFixed(2),
+        feeAmount: '0.00',
+        currency: account.currency,
+        type: 'DEPOSIT',
+        status: 'COMPLETED',
+        description: description?.trim() || 'Account deposit',
+        completedAt: new Date(),
+      })
+      .returning();
+
+    const transaction = transactionResult[0];
+
+    const updatedAccountResult = await tx
+      .update(accounts)
+      .set({
+        balance: sql`${accounts.balance} + ${amount.toFixed(2)}`,
+        availableBalance: sql`${accounts.availableBalance} + ${amount.toFixed(2)}`,
+        updatedAt: new Date(),
+      })
+      .where(eq(accounts.id, account.id))
+      .returning();
+
+    return {
+      transaction,
+      account: updatedAccountResult[0],
+      customer
+    };
+  });
+  await emailService.sendTransactionEmail({
+    to: result.customer.email,
+    firstName: result.customer.firstName,
+    transactionId: result.transaction.id,
+    referenceNumber: result.transaction.referenceNumber,
+    type: 'DEPOSIT',
+    amount: result.transaction.amount,
+    currency: result.transaction.currency,
+    accountNumber: result.account.accountNumber,
+    description: result.transaction.description,
+    balance: result.account.availableBalance,
+    createdAt: result.transaction.createdAt,
+})
+return result;
 }
 
+
+
+//withdraw
+
+createWithdraw = async ({
+  accountId,
+  amount,
+  description,
+}: {
+  accountId: number;
+  amount: number;
+  description?: string;
+}) => {
+  const result = await db.transaction(async (tx) => {
+    const accountResult = await tx
+      .select()
+      .from(accounts)
+      .where(eq(accounts.customerId, accountId))
+      .limit(1);
+
+    const account = accountResult[0];
+
+const customerResult = await tx
+  .select()
+  .from(customers)
+  .where(eq(customers.id, account.customerId))
+  .limit(1);
+
+const customer = customerResult[0];
+
+if (!customer) {
+  throw new Error('Customer not found');
+}
+    if (!account) {
+      throw new Error('Account not found');
+    }
+
+    if (account.status !== 'ACTIVE') {
+      throw new Error('Account is not active');
+    }
+
+    const availableBalance = Number(account.availableBalance);
+
+    if (availableBalance < amount) {
+      throw new Error('Insufficient available balance');
+    }
+
+    const referenceNumber = `WDL-${crypto.randomUUID()}`;
+
+    const transactionResult = await tx
+      .insert(transactions)
+      .values({
+        referenceNumber,
+        senderAccountId: account.id,
+        receiverAccountId: null,
+        externalAccountNumber: null,
+        externalRoutingCode: null,
+        externalBankName: null,
+        amount: amount.toFixed(2),
+        feeAmount: '0.00',
+        currency: account.currency,
+        type: 'WITHDRAWAL',
+        status: 'COMPLETED',
+        description: description?.trim() || 'Account withdrawal',
+        completedAt: new Date(),
+      })
+      .returning();
+
+    const transaction = transactionResult[0];
+
+    const updatedAccountResult = await tx
+      .update(accounts)
+      .set({
+        balance: sql`${accounts.balance} - ${amount.toFixed(2)}`,
+        availableBalance: sql`${accounts.availableBalance} - ${amount.toFixed(2)}`,
+        updatedAt: new Date(),
+      })
+      .where(
+        and(
+          eq(accounts.id, account.id),
+          sql`${accounts.availableBalance} >= ${amount.toFixed(2)}`
+        )
+      )
+      .returning();
+
+    if (updatedAccountResult.length === 0) {
+      throw new Error('Insufficient available balance');
+    }
+
+    return {
+      transaction,
+      account: updatedAccountResult[0],
+      customer
+    };
+  });
+  await emailService.sendTransactionEmail({
+  to: result.customer.email,
+  firstName: result.customer.firstName,
+  transactionId: result.transaction.id,
+  referenceNumber: result.transaction.referenceNumber,
+  type: 'DEPOSIT',
+  amount: result.transaction.amount,
+  currency: result.transaction.currency,
+  accountNumber: result.account.accountNumber,
+  description: result.transaction.description,
+  balance: result.account.availableBalance,
+  createdAt: result.transaction.createdAt,
+});
+return result;
+}
+
+generateStatement = async ({
+  customerId,
+  from,
+  to,
+  format,
+}: GenerateStatementParams): Promise<Buffer> => {
+  if (format !== 'pdf') {
+    throw new Error('Unsupported statement format');
+  }
+
+  const statement = await this.getStatementData({
+    customerId,
+    from,
+    to,
+  });
+
+  const {
+    account,
+    openingBalance,
+    closingBalance,
+    transactions: statementTransactions,
+  } = statement;
+
+  // Generate PDF
+  return generateStatementPdf(statement);
+};
+
+getStatementData = async ({
+  customerId,
+  from,
+  to,
+}: GetStatementDataParams): Promise<StatementData> => {
+  // Validate dates
+
+  const fromDate = new Date(`${from}T00:00:00+05:30`);
+  const toDate = new Date(`${to}T23:59:59.999+05:30`);
+
+  if (
+    Number.isNaN(fromDate.getTime()) ||
+    Number.isNaN(toDate.getTime())
+  ) {
+    throw new Error('Invalid statement dates');
+  }
+
+  if (fromDate > toDate) {
+    throw new Error('From date cannot be after To date');
+  }
+
+  // Fetch account and customer
+
+  const accountResult = await db
+    .select({
+      id: accounts.id,
+      accountId: accounts.accountId,
+      accountNumber: accounts.accountNumber,
+      accountType: accounts.accountType,
+      currency: accounts.currency,
+      balance: accounts.balance,
+      availableBalance: accounts.availableBalance,
+      status: accounts.status,
+
+      customerId: customers.id,
+      firstName: customers.firstName,
+      lastName: customers.lastName,
+      email: customers.email,
+    })
+    .from(accounts)
+    .innerJoin(
+      customers,
+      eq(accounts.customerId, customers.id),
+    )
+    .where(eq(accounts.customerId, Number(customerId)))
+    .limit(1);
+
+  if (accountResult.length === 0) {
+    throw new Error('Account not found');
+  }
+
+  const account = accountResult[0];
+
+  // Calculate opening balance
+
+  const previousTransactions = await db
+    .select({
+      senderAccountId: transactions.senderAccountId,
+      receiverAccountId: transactions.receiverAccountId,
+      amount: transactions.amount,
+      feeAmount: transactions.feeAmount,
+      type: transactions.type,
+    })
+    .from(transactions)
+    .where(
+      and(
+        eq(transactions.status, 'COMPLETED'),
+        lt(transactions.completedAt, fromDate),
+        or(
+          eq(transactions.senderAccountId, account.id),
+          eq(transactions.receiverAccountId, account.id),
+        ),
+      ),
+    );
+
+  let openingBalance = 0;
+
+  for (const transaction of previousTransactions) {
+    const amount = Number(transaction.amount);
+    const fee = Number(transaction.feeAmount);
+
+    if (transaction.receiverAccountId === account.id) {
+      openingBalance += amount;
+    }
+
+    if (transaction.senderAccountId === account.id) {
+      openingBalance -= amount;
+      openingBalance -= fee;
+    }
+  }
+
+  // Fetch transactions in requested period
+
+  const statementRows = await db
+    .select({
+      id: transactions.id,
+      referenceNumber: transactions.referenceNumber,
+      senderAccountId: transactions.senderAccountId,
+      receiverAccountId: transactions.receiverAccountId,
+      amount: transactions.amount,
+      feeAmount: transactions.feeAmount,
+      type: transactions.type,
+      description: transactions.description,
+      createdAt: transactions.createdAt,
+      completedAt: transactions.completedAt,
+    })
+    .from(transactions)
+    .where(
+      and(
+        eq(transactions.status, 'COMPLETED'),
+        gte(transactions.completedAt, fromDate),
+        lte(transactions.completedAt, toDate),
+        or(
+          eq(transactions.senderAccountId, account.id),
+          eq(transactions.receiverAccountId, account.id),
+        ),
+      ),
+    )
+    .orderBy(asc(transactions.completedAt));
+
+  // Calculate running balance
+
+  let runningBalance = openingBalance;
+
+  const statementTransactions: StatementTransaction[] =
+    statementRows.map((transaction) => {
+      const amount = Number(transaction.amount);
+      const fee = Number(transaction.feeAmount);
+
+      let debit = 0;
+      let credit = 0;
+
+      if (transaction.receiverAccountId === account.id) {
+        credit = amount;
+        runningBalance += amount;
+      }
+
+      if (transaction.senderAccountId === account.id) {
+        debit = amount + fee;
+        runningBalance -= amount + fee;
+      }
+
+      return {
+        id: transaction.id,
+        referenceNumber: transaction.referenceNumber,
+        createdAt: transaction.createdAt,
+        description:
+          transaction.description ||
+          transaction.type.replace('_', ' '),
+        type: transaction.type,
+        amount,
+        debit,
+        credit,
+        balance: runningBalance,
+      };
+    });
+
+  return {
+    account: {
+      accountNumber: account.accountNumber,
+      accountType: account.accountType,
+      currency: account.currency,
+      firstName: account.firstName,
+      lastName: account.lastName,
+    },
+    from,
+    to,
+    openingBalance,
+    closingBalance: runningBalance,
+    transactions: statementTransactions,
+  };
+};
+}
 export const adminService = new AdminService();

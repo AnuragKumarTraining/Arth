@@ -1,7 +1,6 @@
 import { useEffect, useState, useMemo } from 'react';
 import { Navbar } from '../components/navbar';
 import { env } from '../config/env';
-
 export interface AdminTransaction {
   id: string;
   referenceNumber: string;

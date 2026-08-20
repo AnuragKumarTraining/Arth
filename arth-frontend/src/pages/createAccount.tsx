@@ -193,13 +193,13 @@ const handleResendOtp = async (event:any) => {
 
         {step === 'success' && (
           <div className="w-full max-w-md p-8 bg-white border rounded-xl shadow-sm border-slate-200 text-center">
-            <div>Welcome Onboard!</div>
+            <div>Account Created!</div>
             <h2 className="text-2xl font-semibold text-slate-900">Registration Complete</h2>
             <p className="mt-2 text-sm text-slate-600 mb-6">
               Your account has been verified. It is currently pending admin activation.
             </p>
-            <button onClick={() => navigate('/login')} className="text-blue-700 font-semibold hover:underline">
-              Go to Login
+            <button onClick={() => navigate('/admin/kyc')} className="text-blue-700 font-semibold hover:underline">
+              Perform KYC
             </button>
           </div>
         )}
