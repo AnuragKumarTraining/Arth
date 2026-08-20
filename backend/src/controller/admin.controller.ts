@@ -344,12 +344,12 @@ createWithdraw = async (
 
 downloadStatement = async (req: Request, res: Response) => {
   try {
-    const { customerId } = req.params;
+    const customerId = req.params.id || req.params.customerId;
 
-    if (typeof customerId !== 'string') {
+    if (typeof customerId !== 'string' || !/^\d+$/.test(customerId)) {
       res.status(400).json({
         success: false,
-        message: 'Invalid account ID',
+        message: 'Invalid account/customer ID',
       });
       return;
     }
@@ -399,7 +399,7 @@ downloadStatement = async (req: Request, res: Response) => {
 
 getStatementPreview = async (req: Request, res: Response) => {
   try {
-    const { customerId} = req.params;
+    const customerId = req.params.id || req.params.customerId;
 
     if (
       typeof customerId !== 'string' ||

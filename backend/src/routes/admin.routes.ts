@@ -21,5 +21,5 @@ adminRouter.get('/transactions', requireAdminAuth, adminController.getAllTransac
 adminRouter.post('/accounts/:id/beneficiaries', requireAdminAuth, adminController.addBeneficiary);
 adminRouter.post('/accounts/:id/deposit', requireAdminAuth, adminController.createDeposit);
 adminRouter.post('/accounts/:id/withdraw', requireAdminAuth, adminController.createWithdraw);
-adminRouter.get('/accounts/:id/statement',requireAdminAuth,adminController.downloadStatement);
-adminRouter.get('/accounts/:customerId/statement/preview',requireAdminAuth,adminController.getStatementPreview,);
+adminRouter.get('/accounts/:id/statement', requireAdminAuth, adminController.downloadStatement);
+adminRouter.get('/accounts/:id/statement/preview', requireAdminAuth, adminController.getStatementPreview);

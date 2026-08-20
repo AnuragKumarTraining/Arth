@@ -272,6 +272,7 @@ export class AdminService {
           type: 'TRANSFER',
           status: 'COMPLETED',
           description: description || `Transfer to ${beneficiary.name}`,
+          completedAt: new Date(),
         })
         .returning();
 
@@ -648,21 +649,24 @@ getStatementData = async ({
 
   const account = accountResult[0];
 
-  // Calculate opening balance
+  // Helper SQL expression for timestamp fallback
+  const txnTimestamp = sql`COALESCE(${transactions.completedAt}, ${transactions.createdAt})`;
 
-  const previousTransactions = await db
+  // Fetch all completed transactions from `fromDate` onwards to calculate opening balance relative to current ledger balance
+  const transactionsFromFromDate = await db
     .select({
       senderAccountId: transactions.senderAccountId,
       receiverAccountId: transactions.receiverAccountId,
       amount: transactions.amount,
       feeAmount: transactions.feeAmount,
       type: transactions.type,
+      txnTime: txnTimestamp,
     })
     .from(transactions)
     .where(
       and(
         eq(transactions.status, 'COMPLETED'),
-        lt(transactions.completedAt, fromDate),
+        gte(txnTimestamp, fromDate),
         or(
           eq(transactions.senderAccountId, account.id),
           eq(transactions.receiverAccountId, account.id),
@@ -670,24 +674,25 @@ getStatementData = async ({
       ),
     );
 
-  let openingBalance = 0;
+  const currentBalance = Number(account.balance);
+  let netChangeFromFromDate = 0;
 
-  for (const transaction of previousTransactions) {
+  for (const transaction of transactionsFromFromDate) {
     const amount = Number(transaction.amount);
     const fee = Number(transaction.feeAmount);
 
     if (transaction.receiverAccountId === account.id) {
-      openingBalance += amount;
+      netChangeFromFromDate += amount;
     }
 
     if (transaction.senderAccountId === account.id) {
-      openingBalance -= amount;
-      openingBalance -= fee;
+      netChangeFromFromDate -= (amount + fee);
     }
   }
 
-  // Fetch transactions in requested period
+  const openingBalance = currentBalance - netChangeFromFromDate;
 
+  // Fetch transactions in requested period
   const statementRows = await db
     .select({
       id: transactions.id,
@@ -700,23 +705,23 @@ getStatementData = async ({
       description: transactions.description,
       createdAt: transactions.createdAt,
       completedAt: transactions.completedAt,
+      txnTime: txnTimestamp,
     })
     .from(transactions)
     .where(
       and(
         eq(transactions.status, 'COMPLETED'),
-        gte(transactions.completedAt, fromDate),
-        lte(transactions.completedAt, toDate),
+        gte(txnTimestamp, fromDate),
+        lte(txnTimestamp, toDate),
         or(
           eq(transactions.senderAccountId, account.id),
           eq(transactions.receiverAccountId, account.id),
         ),
       ),
     )
-    .orderBy(asc(transactions.completedAt));
+    .orderBy(asc(txnTimestamp));
 
   // Calculate running balance
-
   let runningBalance = openingBalance;
 
   const statementTransactions: StatementTransaction[] =
@@ -734,7 +739,7 @@ getStatementData = async ({
 
       if (transaction.senderAccountId === account.id) {
         debit = amount + fee;
-        runningBalance -= amount + fee;
+        runningBalance -= (amount + fee);
       }
 
       return {
