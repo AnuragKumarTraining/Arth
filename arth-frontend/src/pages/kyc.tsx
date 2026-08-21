@@ -5,7 +5,7 @@ import { env } from '../config/env';
 import { Navbar } from '../components/navbar';
 
 
-const base = "http://localhost:5011/api/admin";
+const base = env.adminBase;
 
 export default function KYC() {
   const [usersList, setUsersList] = useState<CustomerAccount[]>([]);
@@ -68,8 +68,8 @@ export default function KYC() {
       <main className="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center mb-6">
           <div>
-            <h1 className="text-2xl font-bold text-slate-900">Admin Account Review</h1>
-            <p className="text-sm text-slate-600">Review KYC submissions, toggle account activation, and trigger notifications.</p>
+            <h1 className="text-2xl font-bold text-slate-900">Customers KYC Review</h1>
+            <p className="text-sm text-slate-600">Review customer KYC submissions, manage account verification status, and toggle account activation.</p>
           </div>
           <button
             onClick={fetchUsers}
@@ -158,8 +158,8 @@ export default function KYC() {
                           )
                         }
                         className={`px-3 py-1 text-xs font-medium rounded border ${user.isActive
-                            ? 'border-red-300 text-red-700 hover:bg-red-50'
-                            : 'border-green-300 text-green-700 hover:bg-green-50'
+                          ? 'border-red-300 text-red-700 hover:bg-red-50'
+                          : 'border-green-300 text-green-700 hover:bg-green-50'
                           } disabled:opacity-50`}
                       >
                         {updatingId === user.id ? 'Updating...' : user.isActive ? 'Deactivate' : 'Verify & Activate'}

@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { adminController } from '../controller/admin.controller';
 import { validate } from '../middleware/validate';
-import { adminDashboard } from '../validator/admin.validator';
+import { adminDashboard, verifyEditOtpValidator, updateCustomerDetailsValidator } from '../validator/admin.validator';
 import { requireAdminAuth } from '../middleware/admin.auth';
 import { customerAuthController } from '../controller/customer.auth.controller';
 
@@ -11,6 +11,9 @@ adminRouter.post('/login', adminController.login);
 adminRouter.get('/me', requireAdminAuth, adminController.getMe);
 adminRouter.get('/users', requireAdminAuth, adminController.getUsers);
 adminRouter.patch('/users/status', requireAdminAuth, validate(adminDashboard), adminController.updateStatus);
+adminRouter.post('/customers/:id/send-edit-otp', requireAdminAuth, adminController.sendCustomerEditOtp);
+adminRouter.post('/customers/:id/verify-edit-otp', requireAdminAuth, validate(verifyEditOtpValidator), adminController.verifyCustomerEditOtp);
+adminRouter.patch('/customers/:id/details', requireAdminAuth, validate(updateCustomerDetailsValidator), adminController.updateCustomerDetails);
 adminRouter.post('/logout', requireAdminAuth, adminController.logout);
 // adminRouter.get('/me', requireAdminAuth, customerAuthController.getMe);
 

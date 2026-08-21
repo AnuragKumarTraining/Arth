@@ -1,16 +1,30 @@
 import type { Request, Response } from 'express';
+import crypto from 'crypto';
 import { db } from '../db';
 import { customers, accounts, branches, transactions, beneficiaries } from '../db/schema';
 import { AppError } from '../error/AppError';
 import { emailService } from './email.services';
-import { updateAccountInput} from '../validator/admin.validator';;
+import { updateAccountInput, UpdateCustomerDetailsInput } from '../validator/admin.validator';
 import { eq, or, desc, and,sql, lt, gte, lte, asc } from 'drizzle-orm';
 import { alias } from 'drizzle-orm/pg-core';
 import { randomUUID } from 'node:crypto';
 import { PDFDocument, StandardFonts, rgb } from 'pdf-lib';
 import { GenerateStatementParams, GetStatementDataParams, StatementData, StatementTransaction } from '../types/statements.types';
 import { generateStatementPdf } from './statement.pdf.service';
+
 export class AdminService {
+  private editOtpStore = new Map<
+    number,
+    {
+      hashedOtp: string;
+      expiresAt: Date;
+      resendAvailableAt: Date;
+      failedAttempts: number;
+      isUnlocked: boolean;
+      unlockedExpiresAt?: Date;
+    }
+  >();
+
   async listUsers() {
     return await db
       .select({
@@ -19,6 +33,9 @@ export class AdminService {
         lastName: customers.lastName,
         email: customers.email,
         phoneNumber: customers.phoneNumber,
+        dateOfBirth: customers.dateOfBirth,
+        nationalId: customers.nationalId,
+        address: customers.address,
         kycStatus: customers.kycStatus,
         isActive: customers.isActive,
         createdAt: customers.createdAt,
@@ -28,6 +45,164 @@ export class AdminService {
       })
       .from(customers)
       .leftJoin(accounts, eq(customers.id, accounts.customerId));
+  }
+
+  async sendCustomerEditOtp(customerId: number) {
+    const customerList = await db
+      .select({ id: customers.id, email: customers.email, firstName: customers.firstName })
+      .from(customers)
+      .where(eq(customers.id, customerId))
+      .limit(1);
+
+    if (customerList.length === 0) {
+      throw new AppError(404, 'Customer record not found');
+    }
+
+    const customer = customerList[0];
+    const existingOtp = this.editOtpStore.get(customerId);
+    const now = Date.now();
+
+    if (existingOtp && now < existingOtp.resendAvailableAt.getTime()) {
+      const waitSec = Math.ceil((existingOtp.resendAvailableAt.getTime() - now) / 1000);
+      throw new AppError(429, `Please wait ${waitSec} seconds before requesting a new OTP.`);
+    }
+
+    const rawOtp = crypto.randomInt(100000, 999999).toString();
+    const hashedOtp = crypto.createHash('sha256').update(rawOtp).digest('hex');
+    const expiresAt = new Date(now + 5 * 60 * 1000);
+    const resendAvailableAt = new Date(now + 30 * 1000);
+
+    this.editOtpStore.set(customerId, {
+      hashedOtp,
+      expiresAt,
+      resendAvailableAt,
+      failedAttempts: 0,
+      isUnlocked: false,
+    });
+
+    console.info(`[AdminService:sendCustomerEditOtp] Dispatching OTP for customer edit to registered email: ${customer.email}`);
+    await emailService.sendOtpEmail(customer.email, rawOtp);
+
+    return {
+      success: true,
+      message: `OTP sent successfully to customer's registered email (${customer.email}).`,
+    };
+  }
+
+  async verifyCustomerEditOtp(customerId: number, otp: string) {
+    const otpRecord = this.editOtpStore.get(customerId);
+    const now = Date.now();
+
+    if (!otpRecord || now > otpRecord.expiresAt.getTime()) {
+      if (otpRecord) this.editOtpStore.delete(customerId);
+      throw new AppError(400, 'INVALID_OR_EXPIRED_OTP');
+    }
+
+    if (otpRecord.failedAttempts >= 3) {
+      this.editOtpStore.delete(customerId);
+      throw new AppError(429, 'MAXIMUM_ATTEMPTS_REACHED');
+    }
+
+    const hashedInputOtp = crypto.createHash('sha256').update(otp).digest('hex');
+    const inputBuf = Buffer.from(hashedInputOtp, 'hex');
+    const storedBuf = Buffer.from(otpRecord.hashedOtp, 'hex');
+    const isOtpValid = inputBuf.length === storedBuf.length && crypto.timingSafeEqual(inputBuf, storedBuf);
+
+    if (!isOtpValid) {
+      otpRecord.failedAttempts += 1;
+      throw new AppError(400, 'INVALID_OR_EXPIRED_OTP');
+    }
+
+    // Mark edit session as unlocked for 15 minutes
+    otpRecord.isUnlocked = true;
+    otpRecord.unlockedExpiresAt = new Date(now + 15 * 60 * 1000);
+
+    return {
+      success: true,
+      message: 'OTP verified successfully. Customer profile editing unlocked!',
+    };
+  }
+
+  async updateCustomerDetails(customerId: number, input: UpdateCustomerDetailsInput) {
+    const { email, firstName, lastName, phoneNumber, address, dateOfBirth } = input;
+
+    const customerList = await db
+      .select()
+      .from(customers)
+      .where(eq(customers.id, customerId))
+      .limit(1);
+
+    if (customerList.length === 0) {
+      throw new AppError(404, 'Customer record not found');
+    }
+
+    const currentCustomer = customerList[0];
+    const otpRecord = this.editOtpStore.get(customerId);
+    const now = Date.now();
+
+    if (!otpRecord || !otpRecord.isUnlocked || !otpRecord.unlockedExpiresAt || now > otpRecord.unlockedExpiresAt.getTime()) {
+      if (otpRecord) this.editOtpStore.delete(customerId);
+      throw new AppError(403, 'EDIT_NOT_AUTHORIZED. Please verify the OTP sent to the registered email first.');
+    }
+
+    // Check if email is being updated and check conflict
+    let newEmailToSet: string | undefined = undefined;
+    if (email && email.trim().toLowerCase() !== currentCustomer.email.toLowerCase()) {
+      const normalizedNewEmail = email.trim().toLowerCase();
+
+      const emailConflict = await db
+        .select({ id: customers.id })
+        .from(customers)
+        .where(and(eq(customers.email, normalizedNewEmail), sql`${customers.id} != ${customerId}`))
+        .limit(1);
+
+      if (emailConflict.length > 0) {
+        throw new AppError(409, 'An account with this email address already exists.');
+      }
+
+      newEmailToSet = normalizedNewEmail;
+    }
+
+    // Consume edit session lock
+    this.editOtpStore.delete(customerId);
+
+    const updateFields: Record<string, any> = {
+      updatedAt: new Date(),
+    };
+
+    if (newEmailToSet) updateFields.email = newEmailToSet;
+    if (firstName !== undefined) updateFields.firstName = firstName.trim();
+    if (lastName !== undefined) updateFields.lastName = lastName.trim();
+    if (phoneNumber !== undefined) updateFields.phoneNumber = phoneNumber.trim();
+    if (address !== undefined) updateFields.address = address.trim();
+    if (dateOfBirth !== undefined && dateOfBirth) {
+      updateFields.dateOfBirth = new Date(dateOfBirth);
+    }
+
+    await db
+      .update(customers)
+      .set(updateFields)
+      .where(eq(customers.id, customerId));
+
+    const [updatedCustomer] = await db
+      .select({
+        id: customers.id,
+        firstName: customers.firstName,
+        lastName: customers.lastName,
+        email: customers.email,
+        phoneNumber: customers.phoneNumber,
+        dateOfBirth: customers.dateOfBirth,
+        nationalId: customers.nationalId,
+        address: customers.address,
+        kycStatus: customers.kycStatus,
+        isActive: customers.isActive,
+        updatedAt: customers.updatedAt,
+      })
+      .from(customers)
+      .where(eq(customers.id, customerId))
+      .limit(1);
+
+    return updatedCustomer;
   }
 
   async updateAccountStatus(input: updateAccountInput) {

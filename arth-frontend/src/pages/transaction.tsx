@@ -34,6 +34,8 @@ export default function Transactions() {
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [statusFilter, setStatusFilter] = useState<string>('ALL');
   const [typeFilter, setTypeFilter] = useState<string>('ALL');
+  const [fromDate, setFromDate] = useState<string>('');
+  const [toDate, setToDate] = useState<string>('');
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [itemsPerPage, setItemsPerPage] = useState<number>(10);
 
@@ -66,7 +68,7 @@ export default function Transactions() {
   // Reset to page 1 whenever filter parameters change
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchQuery, statusFilter, typeFilter, itemsPerPage]);
+  }, [searchQuery, statusFilter, typeFilter, fromDate, toDate, itemsPerPage]);
 
   // Filter transactions
   const filteredTransactions = useMemo(() => {
@@ -93,9 +95,31 @@ export default function Transactions() {
       // Type match check
       const matchesType = typeFilter === 'ALL' || tx.type === typeFilter;
 
-      return matchesSearch && matchesStatus && matchesType;
+      // Date Range match check
+      let matchesDateRange = true;
+      if (fromDate || toDate) {
+        const txTime = tx.createdAt ? new Date(tx.createdAt).getTime() : 0;
+        if (!isNaN(txTime)) {
+          if (fromDate) {
+            const startMs = new Date(`${fromDate}T00:00:00`).getTime();
+            if (!isNaN(startMs) && txTime < startMs) {
+              matchesDateRange = false;
+            }
+          }
+          if (toDate) {
+            const endMs = new Date(`${toDate}T23:59:59.999`).getTime();
+            if (!isNaN(endMs) && txTime > endMs) {
+              matchesDateRange = false;
+            }
+          }
+        } else {
+          matchesDateRange = false;
+        }
+      }
+
+      return matchesSearch && matchesStatus && matchesType && matchesDateRange;
     });
-  }, [transactionsList, searchQuery, statusFilter, typeFilter]);
+  }, [transactionsList, searchQuery, statusFilter, typeFilter, fromDate, toDate]);
 
   // Analytics Metrics
   const metrics = useMemo(() => {
@@ -257,8 +281,30 @@ export default function Transactions() {
             )}
           </div>
 
-          {/* Filter Selects */}
-          <div className="flex flex-wrap items-center gap-3 w-full md:w-auto justify-end">
+          {/* Filter Selects & Date Range */}
+          <div className="flex flex-wrap items-center gap-3 w-full lg:w-auto justify-end">
+            <div className="flex items-center gap-2">
+              <label className="text-xs font-medium text-slate-600">From:</label>
+              <input
+                type="date"
+                value={fromDate}
+                max={toDate || undefined}
+                onChange={(e) => setFromDate(e.target.value)}
+                className="text-xs border border-slate-300 rounded-md px-2.5 py-1.5 bg-white text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+
+            <div className="flex items-center gap-2">
+              <label className="text-xs font-medium text-slate-600">To:</label>
+              <input
+                type="date"
+                value={toDate}
+                min={fromDate || undefined}
+                onChange={(e) => setToDate(e.target.value)}
+                className="text-xs border border-slate-300 rounded-md px-2.5 py-1.5 bg-white text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+
             <div className="flex items-center gap-2">
               <label className="text-xs font-medium text-slate-600">Type:</label>
               <select
@@ -290,12 +336,14 @@ export default function Transactions() {
               </select>
             </div>
 
-            {(searchQuery || statusFilter !== 'ALL' || typeFilter !== 'ALL') && (
+            {(searchQuery || statusFilter !== 'ALL' || typeFilter !== 'ALL' || fromDate || toDate) && (
               <button
                 onClick={() => {
                   setSearchQuery('');
                   setStatusFilter('ALL');
                   setTypeFilter('ALL');
+                  setFromDate('');
+                  setToDate('');
                 }}
                 className="text-xs text-blue-600 hover:text-blue-800 font-medium underline px-2"
               >
@@ -355,7 +403,7 @@ export default function Transactions() {
               ) : paginatedTransactions.length === 0 ? (
                 <tr>
                   <td colSpan={7} className="px-4 py-12 text-center text-sm font-medium text-slate-500">
-                    {searchQuery || statusFilter !== 'ALL' || typeFilter !== 'ALL'
+                    {searchQuery || statusFilter !== 'ALL' || typeFilter !== 'ALL' || fromDate || toDate
                       ? 'No transactions found matching the applied search and filters.'
                       : 'No transaction records exist in the system.'}
                   </td>

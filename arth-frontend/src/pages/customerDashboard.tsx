@@ -7,6 +7,7 @@ import type { Transaction } from '../config/transaction';
 import { TransferModal } from '../components/Modals/transferModal';
 import { DepositModal } from '../components/Modals/depositModal';
 import { WithdrawModal } from '../components/Modals/withdrawModal';
+import { AccountSettingsModal } from '../components/Modals/accountSettingsModal';
 
 const API_BASE = env.adminBase;
 
@@ -23,6 +24,7 @@ export default function CustomerDashboard() {
   const [isTransferModalOpen, setIsTransferModalOpen] = useState(false);
   const [isDepositModalOpen, setIsDepositModalOpen] = useState(false);
   const [isWithdrawModalOpen, setIsWithdrawModalOpen] = useState(false);
+  const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
   const [beneficiaries, setBeneficiaries] = useState<any[]>([]);
 
 
@@ -215,6 +217,7 @@ const handleWithdraw = async() =>{
 
     <button
       type="button"
+      onClick={() => setIsSettingsModalOpen(true)}
       className="w-full py-2.5 px-4 text-sm font-medium text-slate-700 bg-slate-100 rounded-lg hover:bg-slate-200 transition-colors"
     >
       Account Settings
@@ -341,6 +344,17 @@ const handleWithdraw = async() =>{
   accountId={id}
   onSuccess={fetchAccountData}
 />
+{customer && (
+  <AccountSettingsModal
+    isOpen={isSettingsModalOpen}
+    onClose={() => setIsSettingsModalOpen(false)}
+    customer={customer}
+    onCustomerUpdated={(updated) => {
+      setCustomer((prev) => (prev ? { ...prev, ...updated } : prev));
+      fetchAccountData();
+    }}
+  />
+)}
 </div>
 );
 }

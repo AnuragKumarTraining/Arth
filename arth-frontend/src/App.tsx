@@ -7,6 +7,8 @@ import AdminDashboard from './pages/adminPage';
 import KYC from './pages/kyc';
 import Transactions from './pages/transaction';
 import Statement from './pages/statement';
+import AccountSettings from './pages/accountSettings';
+import DispatchCollectors from './pages/dispatchCollectors';
 
 import { AdminAuthProvider, useAdminAuth } from './context/adminAuthContext';
 import ProtectedAdminRoute from './routes/protectAdminRoutes';
@@ -45,6 +47,14 @@ function CustomRoutes() {
           element: <KYC />,
         },
         {
+          path: 'collectors',
+          element: <DispatchCollectors />,
+        },
+        {
+          path: 'settings',
+          element: <AccountSettings />,
+        },
+        {
           path: 'open-account',
           element: <Register />,
         },
@@ -59,6 +69,10 @@ function CustomRoutes() {
         {
           path: 'accounts/:id/statement',
           element: <Statement />,
+        },
+        {
+          path: 'accounts/:id/settings',
+          element: <AccountSettings />,
         },
       ],
     },

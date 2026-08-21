@@ -182,6 +182,49 @@ class AdminController {
     }
   };
 
+  sendCustomerEditOtp = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const customerId = parseInt(String(req.params.id), 10);
+      if (isNaN(customerId)) throw new AppError(400, 'Invalid customer ID');
+
+      const result = await adminService.sendCustomerEditOtp(customerId);
+      res.status(200).json(result);
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  verifyCustomerEditOtp = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const customerId = parseInt(String(req.params.id), 10);
+      if (isNaN(customerId)) throw new AppError(400, 'Invalid customer ID');
+
+      const { otp } = req.body;
+      if (!otp) throw new AppError(400, 'OTP is required');
+
+      const result = await adminService.verifyCustomerEditOtp(customerId, otp);
+      res.status(200).json(result);
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  updateCustomerDetails = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const customerId = parseInt(String(req.params.id), 10);
+      if (isNaN(customerId)) throw new AppError(400, 'Invalid customer ID');
+
+      const updatedCustomer = await adminService.updateCustomerDetails(customerId, req.body);
+      res.status(200).json({
+        success: true,
+        message: 'Customer details updated successfully.',
+        customer: updatedCustomer,
+      });
+    } catch (error) {
+      next(error);
+    }
+  };
+
 addBeneficiary = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
      const rawaccountId = req.params.id;
