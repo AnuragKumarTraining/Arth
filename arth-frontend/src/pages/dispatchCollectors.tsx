@@ -190,10 +190,6 @@ export default function DispatchCollectors() {
           })}
         </div>
       </main>
-
-      {/* ========================================================================= */}
-      {/* RUNNING CARTOON DISPATCH TRACK (FIXED AT THE BOTTOM) */}
-      {/* ========================================================================= */}
       <div className="fixed bottom-0 left-0 right-0 z-40 bg-slate-900 text-white border-t border-slate-800 shadow-2xl h-24 flex flex-col justify-between">
         {/* Track Label */}
         <div className="px-6 pt-2 flex justify-between items-center text-xs font-mono text-slate-400">
