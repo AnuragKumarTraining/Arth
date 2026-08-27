@@ -10,6 +10,7 @@ lerna-debug.log*
 node_modules
 dist
 .env
+seed_db.ts
 admin
 erdiagram.xml
 dist-ssr
