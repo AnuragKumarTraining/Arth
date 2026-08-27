@@ -26,3 +26,6 @@ adminRouter.post('/accounts/:id/deposit', requireAdminAuth, adminController.crea
 adminRouter.post('/accounts/:id/withdraw', requireAdminAuth, adminController.createWithdraw);
 adminRouter.get('/accounts/:id/statement', requireAdminAuth, adminController.downloadStatement);
 adminRouter.get('/accounts/:id/statement/preview', requireAdminAuth, adminController.getStatementPreview);
+adminRouter.post('/loans', requireAdminAuth, adminController.createLoan);
+// Add this below your createLoan route
+adminRouter.post('/accounts/:id/loans/:loanId/pay', requireAdminAuth, adminController.processLoanPayment);

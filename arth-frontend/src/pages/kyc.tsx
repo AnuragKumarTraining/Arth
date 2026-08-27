@@ -16,13 +16,32 @@ export default function KYC() {
     isError: boolean;
   } | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
+  const [totalUsers, setTotalUsers] = useState(0);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
+  const [kycFilter, setKycFilter] = useState('ALL');
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      setDebouncedSearchQuery(searchQuery.trim());
+    }, 300);
+
+    return () => window.clearTimeout(timer);
+  }, [searchQuery]);
 
   const fetchUsers = async () => {
     try {
       setIsLoading(true);
       setFeedback(null);
 
-      const res = await fetch(`${base}/users`, {
+      const params = new URLSearchParams({
+        page: String(currentPage),
+        limit: String(ITEMS_PER_PAGE),
+      });
+      if (debouncedSearchQuery) params.set('search', debouncedSearchQuery);
+      if (kycFilter !== 'ALL') params.set('kycStatus', kycFilter);
+
+      const res = await fetch(`${base}/users?${params.toString()}`, {
         credentials: 'include',
       });
 
@@ -35,7 +54,7 @@ export default function KYC() {
       }
 
       setUsersList(data.users || []);
-      setCurrentPage(1);
+      setTotalUsers(data.pagination?.total ?? 0);
     } catch (error) {
       const message =
         error instanceof Error
@@ -53,7 +72,11 @@ export default function KYC() {
 
   useEffect(() => {
     fetchUsers();
-  }, []);
+  }, [currentPage, debouncedSearchQuery, kycFilter]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [debouncedSearchQuery, kycFilter]);
 
   const handleStatusUpdate = async (
     userId: string,
@@ -120,18 +143,11 @@ export default function KYC() {
   };
 
   const totalPages = Math.ceil(
-    usersList.length / ITEMS_PER_PAGE,
+    totalUsers / ITEMS_PER_PAGE,
   );
 
-  const startIndex =
-    (currentPage - 1) * ITEMS_PER_PAGE;
-
-  const endIndex = startIndex + ITEMS_PER_PAGE;
-
-  const paginatedUsers = usersList.slice(
-    startIndex,
-    endIndex,
-  );
+  const startIndex = totalUsers === 0 ? 0 : (currentPage - 1) * ITEMS_PER_PAGE + 1;
+  const endIndex = Math.min(currentPage * ITEMS_PER_PAGE, totalUsers);
 
   const handlePreviousPage = () => {
     setCurrentPage((page) => Math.max(page - 1, 1));
@@ -182,6 +198,27 @@ export default function KYC() {
           </div>
         )}
 
+        <div className="mb-6 flex flex-col sm:flex-row gap-3">
+          <input
+            type="text"
+            placeholder="Search by name, email, phone, or account..."
+            value={searchQuery}
+            onChange={(event) => setSearchQuery(event.target.value)}
+            className="w-full sm:w-96 px-4 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm"
+          />
+          <select
+            value={kycFilter}
+            onChange={(event) => setKycFilter(event.target.value)}
+            className="px-3 py-2 border border-slate-300 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            <option value="ALL">All KYC statuses</option>
+            <option value="pending">Pending</option>
+            <option value="verified">Verified</option>
+            <option value="rejected">Rejected</option>
+            <option value="APPROVED">Approved</option>
+          </select>
+        </div>
+
         <div className="overflow-x-auto bg-white border border-slate-200 rounded-lg shadow-sm">
           <table className="min-w-full divide-y divide-slate-200">
             <thead className="bg-slate-100">
@@ -228,7 +265,7 @@ export default function KYC() {
                   </td>
                 </tr>
               ) : (
-                paginatedUsers.map((user) => (
+                usersList.map((user) => (
                   <tr
                     key={user.id}
                     className="hover:bg-slate-50"
@@ -346,23 +383,20 @@ export default function KYC() {
           </table>
         </div>
 
-        {!isLoading && usersList.length > 0 && (
+        {!isLoading && totalUsers > 0 && (
           <div className="mt-4 flex flex-col sm:flex-row items-center justify-between gap-3">
             <p className="text-sm text-slate-500">
               Showing{' '}
               <span className="font-medium text-slate-700">
-                {startIndex + 1}
+                {startIndex}
               </span>{' '}
               to{' '}
               <span className="font-medium text-slate-700">
-                {Math.min(
-                  endIndex,
-                  usersList.length,
-                )}
+                {endIndex}
               </span>{' '}
               of{' '}
               <span className="font-medium text-slate-700">
-                {usersList.length}
+                {totalUsers}
               </span>{' '}
               customers
             </p>
@@ -378,29 +412,9 @@ export default function KYC() {
               </button>
 
               <div className="flex items-center gap-1">
-                {Array.from(
-                  { length: totalPages },
-                  (_, index) => {
-                    const page = index + 1;
-
-                    return (
-                      <button
-                        key={page}
-                        type="button"
-                        onClick={() =>
-                          setCurrentPage(page)
-                        }
-                        className={`min-w-8 px-2 py-1.5 text-sm font-medium rounded-md ${
-                          currentPage === page
-                            ? 'bg-slate-800 text-white'
-                            : 'text-slate-700 bg-white border border-slate-300 hover:bg-slate-50'
-                        }`}
-                      >
-                        {page}
-                      </button>
-                    );
-                  },
-                )}
+                <span className="px-3 py-1.5 text-sm font-medium text-slate-700">
+                  Page {currentPage} of {totalPages || 1}
+                </span>
               </div>
 
               <button

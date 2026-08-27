@@ -9,8 +9,13 @@ import { emailService } from '../services/email.services';
 class AdminController {
   getUsers = async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const data = await adminService.listUsers();
-      res.status(200).json({ users: data });
+      const data = await adminService.listUsers({
+        page: Number(req.query.page),
+        limit: Number(req.query.limit),
+        search: typeof req.query.search === 'string' ? req.query.search : undefined,
+        kycStatus: typeof req.query.kycStatus === 'string' ? req.query.kycStatus : undefined,
+      });
+      res.status(200).json(data);
     } catch (error) {
       next(error);
     }
@@ -112,6 +117,7 @@ class AdminController {
       customer: data.customer,
       account: data.account,
       transactions: data.transactions,
+      loans: data.loans,
     });
   } catch (error) {
     next(error);
@@ -173,12 +179,20 @@ class AdminController {
       next(error);
     }
   };
-  getAllTransactions = async (_req: Request, res: Response, next: NextFunction): Promise<void> => {
+  getAllTransactions = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
-      const data = await adminService.getAllTransactions();
+      const data = await adminService.getAllTransactions({
+        page: Number(req.query.page),
+        limit: Number(req.query.limit),
+        search: typeof req.query.search === 'string' ? req.query.search : undefined,
+        status: typeof req.query.status === 'string' ? req.query.status : undefined,
+        type: typeof req.query.type === 'string' ? req.query.type : undefined,
+        fromDate: typeof req.query.fromDate === 'string' ? req.query.fromDate : undefined,
+        toDate: typeof req.query.toDate === 'string' ? req.query.toDate : undefined,
+      });
       res.status(200).json({
         success: true,
-        transactions: data,
+        ...data,
       });
     } catch (error) {
       next(error);
@@ -494,7 +508,61 @@ getStatementPreview = async (req: Request, res: Response) => {
       message,
     });
   }
-};
+}
+  createLoan = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const { customerId, type, principalAmount, interestRate, tenureMonths } = req.body;
+
+      if (!customerId || !type || !principalAmount || !interestRate || !tenureMonths) {
+        throw new AppError(400, 'Missing required loan parameters');
+      }
+
+      // Ensure the type matches the allowed Enums in the database
+      const validTypes = ['PERSONAL', 'HOME', 'AUTO', 'EDUCATION'];
+      if (!validTypes.includes(type)) {
+        throw new AppError(400, `Invalid loan type. Must be one of: ${validTypes.join(', ')}`);
+      }
+
+      const loan = await adminService.createLoanAccount({
+        customerId: Number(customerId),
+        type,
+        principalAmount: Number(principalAmount),
+        interestRate: Number(interestRate),
+        tenureMonths: Number(tenureMonths),
+      });
+
+      res.status(201).json({
+        success: true,
+        message: 'Loan account successfully created and disbursed',
+        loan,
+      });
+    } catch (error) {
+      next(error);
+    }
+  };
+processLoanPayment = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const accountId = parseInt(req.params.id, 10);
+      const { loanId } = req.params;
+      const { paymentType } = req.body; // 'EMI' or 'FULL'
+
+      if (isNaN(accountId)) throw new AppError(400, 'Invalid account ID');
+      if (!loanId) throw new AppError(400, 'Loan ID is required');
+      if (paymentType !== 'EMI' && paymentType !== 'FULL') {
+        throw new AppError(400, 'Invalid payment type. Must be EMI or FULL');
+      }
+
+      const result = await adminService.processLoanRepayment(accountId, loanId, paymentType);
+
+      res.status(200).json({
+        success: true,
+        message: 'Loan payment processed successfully',
+        ...result,
+      });
+    } catch (error) {
+      next(error);
+    }
+  };
 }
 
 export const adminController = new AdminController();

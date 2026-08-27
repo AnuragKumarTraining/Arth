@@ -6,3 +6,4 @@ export * from "./beneficiary";
 export * from "./refreshTokenTable";
 export * from "./transaction";
 export * from "./admin"
+export * from "./loans"

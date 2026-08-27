@@ -11,21 +11,38 @@ export default function StaffDashboard() {
 
   // --- NEW: Search & Pagination State ---
   const [searchQuery, setSearchQuery] = useState('');
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const ITEMS_PER_PAGE = 5;
+  const [totalUsers, setTotalUsers] = useState(0);
 
   const base = "http://localhost:5011/api/admin";
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      setDebouncedSearchQuery(searchQuery.trim());
+    }, 300);
+
+    return () => window.clearTimeout(timer);
+  }, [searchQuery]);
 
   const fetchUsers = async () => {
     setIsLoading(true);
     setFeedback(null);
     try {
-      const res = await fetch(`${base}/users`, {
+      const params = new URLSearchParams({
+        page: String(currentPage),
+        limit: String(ITEMS_PER_PAGE),
+      });
+      if (debouncedSearchQuery) params.set('search', debouncedSearchQuery);
+
+      const res = await fetch(`${base}/users?${params.toString()}`, {
         credentials: 'include',
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || 'Failed to fetch users');
       setUsersList(data.users || []);
+      setTotalUsers(data.pagination?.total ?? 0);
     } catch (err: any) {
       setFeedback({ message: err.message, isError: true });
     } finally {
@@ -35,30 +52,14 @@ export default function StaffDashboard() {
 
   useEffect(() => {
     fetchUsers();
-  }, []);
+  }, [currentPage, debouncedSearchQuery]);
 
   // --- NEW: Reset to page 1 on search ---
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchQuery]);
+  }, [debouncedSearchQuery]);
 
-  // --- NEW: Filter & Paginate logic ---
-  const filteredUsers = usersList.filter((user) => {
-    const searchLower = searchQuery.toLowerCase();
-    return (
-      user.firstName.toLowerCase().includes(searchLower) ||
-      user.lastName.toLowerCase().includes(searchLower) ||
-      user.email.toLowerCase().includes(searchLower) ||
-      (user.accountNumber && user.accountNumber.toLowerCase().includes(searchLower)) ||
-      (user.customerId && String(user.customerId).toLowerCase().includes(searchLower))
-    );
-  });
-
-  const totalPages = Math.ceil(filteredUsers.length / ITEMS_PER_PAGE) || 1;
-  const paginatedUsers = filteredUsers.slice(
-    (currentPage - 1) * ITEMS_PER_PAGE,
-    currentPage * ITEMS_PER_PAGE
-  );
+  const totalPages = Math.ceil(totalUsers / ITEMS_PER_PAGE) || 1;
 
   // Helper to color-code KYC badges
   const getKycBadgeColor = (status: string) => {
@@ -153,7 +154,7 @@ export default function StaffDashboard() {
                     Loading customer accounts...
                   </td>
                 </tr>
-              ) : filteredUsers.length === 0 ? (
+              ) : usersList.length === 0 ? (
                 <tr>
                   <td colSpan={5} className="px-4 py-12 text-center text-sm font-medium text-slate-500">
                     {searchQuery ? `No accounts found matching "${searchQuery}"` : "No customer accounts found in the branch registry."}
@@ -161,7 +162,7 @@ export default function StaffDashboard() {
                 </tr>
               ) : (
                 // --- CHANGED: mapping over paginatedUsers instead of usersList ---
-                paginatedUsers.map((user) => (
+                usersList.map((user) => (
                   <tr key={user.id} className="hover:bg-slate-50 transition-colors group">
                     <td className="px-4 py-4 text-sm">
                       <div className="font-medium text-slate-900">{user.firstName} {user.lastName}</div>
@@ -208,11 +209,11 @@ export default function StaffDashboard() {
           </table>
           
           {/* --- NEW: Pagination Controls --- */}
-          {!isLoading && filteredUsers.length > 0 && (
+          {!isLoading && totalUsers > 0 && (
             <div className="flex items-center justify-between px-4 py-3 border-t border-slate-200 bg-white sm:px-6">
               <div className="hidden sm:block">
                 <p className="text-sm text-slate-700">
-                  Showing <span className="font-medium">{(currentPage - 1) * ITEMS_PER_PAGE + 1}</span> to <span className="font-medium">{Math.min(currentPage * ITEMS_PER_PAGE, filteredUsers.length)}</span> of <span className="font-medium">{filteredUsers.length}</span> accounts
+                  Showing <span className="font-medium">{(currentPage - 1) * ITEMS_PER_PAGE + 1}</span> to <span className="font-medium">{Math.min(currentPage * ITEMS_PER_PAGE, totalUsers)}</span> of <span className="font-medium">{totalUsers}</span> accounts
                 </p>
               </div>
               <div className="flex flex-1 justify-between sm:justify-end gap-2 text-sm">

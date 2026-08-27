@@ -38,6 +38,7 @@ export default function Transactions() {
   const [toDate, setToDate] = useState<string>('');
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [itemsPerPage, setItemsPerPage] = useState<number>(10);
+  const [totalTransactions, setTotalTransactions] = useState<number>(0);
 
   // Selected Transaction for Details Modal
   const [selectedTx, setSelectedTx] = useState<AdminTransaction | null>(null);
@@ -46,7 +47,18 @@ export default function Transactions() {
     setIsLoading(true);
     setFeedback(null);
     try {
-      const res = await fetch(`${env.adminBase}/transactions`, {
+      const params = new URLSearchParams({
+        page: String(currentPage),
+        limit: String(itemsPerPage),
+      });
+
+      if (searchQuery.trim()) params.set('search', searchQuery.trim());
+      if (statusFilter !== 'ALL') params.set('status', statusFilter);
+      if (typeFilter !== 'ALL') params.set('type', typeFilter);
+      if (fromDate) params.set('fromDate', fromDate);
+      if (toDate) params.set('toDate', toDate);
+
+      const res = await fetch(`${env.adminBase}/transactions?${params.toString()}`, {
         credentials: 'include',
       });
       const data = await res.json();
@@ -54,6 +66,7 @@ export default function Transactions() {
         throw new Error(data.message || 'Failed to fetch transactions');
       }
       setTransactionsList(data.transactions || []);
+      setTotalTransactions(data.pagination?.total ?? 0);
     } catch (err: any) {
       setFeedback({ message: err.message || 'Error connecting to server', isError: true });
     } finally {
@@ -63,67 +76,16 @@ export default function Transactions() {
 
   useEffect(() => {
     fetchTransactions();
-  }, []);
+  }, [currentPage, itemsPerPage, searchQuery, statusFilter, typeFilter, fromDate, toDate]);
 
   // Reset to page 1 whenever filter parameters change
   useEffect(() => {
     setCurrentPage(1);
   }, [searchQuery, statusFilter, typeFilter, fromDate, toDate, itemsPerPage]);
 
-  // Filter transactions
-  const filteredTransactions = useMemo(() => {
-    return transactionsList.filter((tx) => {
-      const q = searchQuery.toLowerCase().trim();
-
-      // Search match check
-      const matchesSearch =
-        !q ||
-        tx.referenceNumber?.toLowerCase().includes(q) ||
-        tx.senderName?.toLowerCase().includes(q) ||
-        tx.senderAccountNumber?.toLowerCase().includes(q) ||
-        tx.receiverName?.toLowerCase().includes(q) ||
-        tx.receiverAccountNumber?.toLowerCase().includes(q) ||
-        tx.externalBankName?.toLowerCase().includes(q) ||
-        tx.description?.toLowerCase().includes(q) ||
-        tx.type?.toLowerCase().includes(q) ||
-        tx.status?.toLowerCase().includes(q) ||
-        String(tx.amount).includes(q);
-
-      // Status match check
-      const matchesStatus = statusFilter === 'ALL' || tx.status === statusFilter;
-
-      // Type match check
-      const matchesType = typeFilter === 'ALL' || tx.type === typeFilter;
-
-      // Date Range match check
-      let matchesDateRange = true;
-      if (fromDate || toDate) {
-        const txTime = tx.createdAt ? new Date(tx.createdAt).getTime() : 0;
-        if (!isNaN(txTime)) {
-          if (fromDate) {
-            const startMs = new Date(`${fromDate}T00:00:00`).getTime();
-            if (!isNaN(startMs) && txTime < startMs) {
-              matchesDateRange = false;
-            }
-          }
-          if (toDate) {
-            const endMs = new Date(`${toDate}T23:59:59.999`).getTime();
-            if (!isNaN(endMs) && txTime > endMs) {
-              matchesDateRange = false;
-            }
-          }
-        } else {
-          matchesDateRange = false;
-        }
-      }
-
-      return matchesSearch && matchesStatus && matchesType && matchesDateRange;
-    });
-  }, [transactionsList, searchQuery, statusFilter, typeFilter, fromDate, toDate]);
-
   // Analytics Metrics
   const metrics = useMemo(() => {
-    const totalCount = transactionsList.length;
+    const totalCount = totalTransactions;
     const totalVolume = transactionsList.reduce((acc, tx) => acc + (tx.amount || 0), 0);
     const completedCount = transactionsList.filter((t) => t.status === 'COMPLETED').length;
     const pendingOrFailedCount = transactionsList.filter(
@@ -136,14 +98,9 @@ export default function Transactions() {
       completedCount,
       pendingOrFailedCount,
     };
-  }, [transactionsList]);
+  }, [transactionsList, totalTransactions]);
 
-  // Pagination logic
-  const totalPages = Math.ceil(filteredTransactions.length / itemsPerPage) || 1;
-  const paginatedTransactions = useMemo(() => {
-    const start = (currentPage - 1) * itemsPerPage;
-    return filteredTransactions.slice(start, start + itemsPerPage);
-  }, [filteredTransactions, currentPage, itemsPerPage]);
+  const totalPages = Math.ceil(totalTransactions / itemsPerPage) || 1;
 
   // Helper Badge Color getters
   const getStatusBadge = (status: string) => {
@@ -400,7 +357,7 @@ export default function Transactions() {
                     Loading transaction records...
                   </td>
                 </tr>
-              ) : paginatedTransactions.length === 0 ? (
+              ) : transactionsList.length === 0 ? (
                 <tr>
                   <td colSpan={7} className="px-4 py-12 text-center text-sm font-medium text-slate-500">
                     {searchQuery || statusFilter !== 'ALL' || typeFilter !== 'ALL' || fromDate || toDate
@@ -409,7 +366,7 @@ export default function Transactions() {
                   </td>
                 </tr>
               ) : (
-                paginatedTransactions.map((tx) => (
+                transactionsList.map((tx) => (
                   <tr key={tx.id} className="hover:bg-slate-50 transition-colors">
                     {/* Reference & Date */}
                     <td className="px-4 py-4 text-sm">
@@ -478,15 +435,15 @@ export default function Transactions() {
           </table>
 
           {/* Pagination Controls */}
-          {!isLoading && filteredTransactions.length > 0 && (
+          {!isLoading && totalTransactions > 0 && (
             <div className="flex flex-col sm:flex-row items-center justify-between px-4 py-3 border-t border-slate-200 bg-white sm:px-6 gap-3">
               <div className="flex items-center gap-4">
                 <p className="text-sm text-slate-700">
                   Showing <span className="font-medium">{(currentPage - 1) * itemsPerPage + 1}</span> to{' '}
                   <span className="font-medium">
-                    {Math.min(currentPage * itemsPerPage, filteredTransactions.length)}
+                    {Math.min(currentPage * itemsPerPage, totalTransactions)}
                   </span>{' '}
-                  of <span className="font-medium">{filteredTransactions.length}</span> transactions
+                  of <span className="font-medium">{totalTransactions}</span> transactions
                 </p>
 
                 <div className="flex items-center gap-1 text-xs text-slate-500">

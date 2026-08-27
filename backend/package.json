@@ -11,7 +11,8 @@
     "dev": "tsx watch src/server.ts",
     "build": "tsc",
     "start": "node dist/server.js",
-    "db:seed:admin": "tsx src/db/admin/seedAdmin.ts"
+    "db:seed:admin": "tsx src/db/admin/seedAdmin.ts",
+    "seed" : "tsx src/seed_db.ts"
   },
   "keywords": [],
   "author": "",

@@ -5,12 +5,13 @@ import { customers, accounts, branches, transactions, beneficiaries } from '../d
 import { AppError } from '../error/AppError';
 import { emailService } from './email.services';
 import { updateAccountInput, UpdateCustomerDetailsInput } from '../validator/admin.validator';
-import { eq, or, desc, and,sql, lt, gte, lte, asc } from 'drizzle-orm';
+import { eq, or, desc, and, sql, lt, gte, lte, asc, count, ilike } from 'drizzle-orm';
 import { alias } from 'drizzle-orm/pg-core';
 import { randomUUID } from 'node:crypto';
 import { PDFDocument, StandardFonts, rgb } from 'pdf-lib';
 import { GenerateStatementParams, GetStatementDataParams, StatementData, StatementTransaction } from '../types/statements.types';
 import { generateStatementPdf } from './statement.pdf.service';
+import { loans } from '../db/schema/loans';
 
 export class AdminService {
   private editOtpStore = new Map<
@@ -25,8 +26,38 @@ export class AdminService {
     }
   >();
 
-  async listUsers() {
-    return await db
+  async listUsers(params: { page?: number; limit?: number; search?: string; kycStatus?: string } = {}) {
+    const requestedPage = params.page;
+    const requestedLimit = params.limit;
+    const page = Number.isInteger(requestedPage) && requestedPage! > 0 ? requestedPage! : 1;
+    const limit = Number.isInteger(requestedLimit) && requestedLimit! > 0
+      ? Math.min(requestedLimit!, 100)
+      : 10;
+    const search = params.search?.trim();
+    const searchFilter = search
+      ? or(
+          ilike(customers.firstName, `%${search}%`),
+          ilike(customers.lastName, `%${search}%`),
+          ilike(customers.email, `%${search}%`),
+          ilike(customers.phoneNumber, `%${search}%`),
+          ilike(accounts.accountNumber, `%${search}%`),
+          sql`CAST(${customers.id} AS TEXT) ILIKE ${`%${search}%`}`,
+        )
+      : undefined;
+    const statusFilter = params.kycStatus && params.kycStatus !== 'ALL'
+      ? eq(customers.kycStatus, params.kycStatus)
+      : undefined;
+    const filters = searchFilter && statusFilter
+      ? and(searchFilter, statusFilter)
+      : searchFilter ?? statusFilter;
+
+    const [totalResult, users] = await Promise.all([
+      db
+        .select({ total: count() })
+        .from(customers)
+        .leftJoin(accounts, eq(customers.id, accounts.customerId))
+        .where(filters),
+      db
       .select({
         id: customers.id,
         firstName: customers.firstName,
@@ -44,7 +75,23 @@ export class AdminService {
         accountType: accounts.accountType,
       })
       .from(customers)
-      .leftJoin(accounts, eq(customers.id, accounts.customerId));
+      .leftJoin(accounts, eq(customers.id, accounts.customerId))
+      .where(filters)
+      .orderBy(desc(customers.createdAt), desc(customers.id))
+      .limit(limit)
+      .offset((page - 1) * limit),
+    ]);
+
+    const total = Number(totalResult[0]?.total ?? 0);
+    return {
+      users,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
+      },
+    };
   }
 
   async sendCustomerEditOtp(customerId: number) {
@@ -253,7 +300,7 @@ export class AdminService {
     return { message: 'Account status updated successfully' };
   }
 
-   async getCustomerProfileAndAccount(customerId: number) {
+  async getCustomerProfileAndAccount(customerId: number) {
     const customerRecords = await db
       .select()
       .from(customers)
@@ -266,7 +313,7 @@ export class AdminService {
 
     const customerRecord = customerRecords[0];
 
-    // Fetch linked bank account and setails
+    // Fetch linked bank account details
     const accountRecords = await db
       .select({
         id: accounts.id,
@@ -291,6 +338,21 @@ export class AdminService {
       availableBalance: Number(accountRecords[0].availableBalance),
       ifscCode: accountRecords[0].ifscCode || 'ARTH0000001',
     } : null;
+
+    // Fetch linked loan accounts
+    const rawLoans = await db
+      .select()
+      .from(loans)
+      .where(eq(loans.customerId, customerId));
+
+    // Cast Postgres numeric strings to JavaScript Numbers for the frontend
+    const customerLoans = rawLoans.map(loan => ({
+      ...loan,
+      principalAmount: Number(loan.principalAmount),
+      outstandingBalance: Number(loan.outstandingBalance),
+      interestRate: Number(loan.interestRate),
+      emiAmount: Number(loan.emiAmount)
+    }));
 
     // Fetch recent transactions
     let txList: any[] = [];
@@ -333,6 +395,7 @@ export class AdminService {
       },
       account,
       transactions: txList,
+      loans: customerLoans, // FIX: Now successfully passed to the client
     };
   }
 
@@ -479,13 +542,73 @@ async addBeneficiary(accountId: number, dto: { name: string; accountNumber: stri
   return newBeneficiary;
 }
 
-  async getAllTransactions() {
+  async getAllTransactions(params: {
+    page?: number;
+    limit?: number;
+    search?: string;
+    status?: string;
+    type?: string;
+    fromDate?: string;
+    toDate?: string;
+  } = {}) {
+    const requestedPage = params.page;
+    const requestedLimit = params.limit;
+    const page = Number.isInteger(requestedPage) && requestedPage! > 0 ? requestedPage! : 1;
+    const limit = Number.isInteger(requestedLimit) && requestedLimit! > 0
+      ? Math.min(requestedLimit!, 100)
+      : 10;
+    const offset = (page - 1) * limit;
     const senderAcc = alias(accounts, 'sender_acc');
     const receiverAcc = alias(accounts, 'receiver_acc');
     const senderCust = alias(customers, 'sender_cust');
     const receiverCust = alias(customers, 'receiver_cust');
 
-    const rawTransactions = await db
+    const filters = [];
+    const search = params.search?.trim();
+
+    if (search) {
+      const pattern = `%${search}%`;
+      filters.push(or(
+        ilike(transactions.referenceNumber, pattern),
+        ilike(transactions.description, pattern),
+        ilike(transactions.externalBankName, pattern),
+        ilike(senderAcc.accountNumber, pattern),
+        ilike(receiverAcc.accountNumber, pattern),
+        ilike(senderCust.firstName, pattern),
+        ilike(senderCust.lastName, pattern),
+        ilike(receiverCust.firstName, pattern),
+        ilike(receiverCust.lastName, pattern),
+        sql`CAST(${transactions.amount} AS TEXT) ILIKE ${pattern}`,
+      ));
+    }
+
+    if (params.status && params.status !== 'ALL') {
+      filters.push(eq(transactions.status, params.status as typeof transactions.status.enumValues[number]));
+    }
+
+    if (params.type && params.type !== 'ALL') {
+      filters.push(eq(transactions.type, params.type as typeof transactions.type.enumValues[number]));
+    }
+
+    if (params.fromDate) {
+      filters.push(gte(transactions.createdAt, new Date(`${params.fromDate}T00:00:00.000Z`)));
+    }
+
+    if (params.toDate) {
+      filters.push(lte(transactions.createdAt, new Date(`${params.toDate}T23:59:59.999Z`)));
+    }
+
+    const whereClause = filters.length > 0 ? and(...filters) : undefined;
+    const [totalResult, rawTransactions] = await Promise.all([
+      db
+        .select({ total: count() })
+        .from(transactions)
+        .leftJoin(senderAcc, eq(transactions.senderAccountId, senderAcc.id))
+        .leftJoin(senderCust, eq(senderAcc.customerId, senderCust.id))
+        .leftJoin(receiverAcc, eq(transactions.receiverAccountId, receiverAcc.id))
+        .leftJoin(receiverCust, eq(receiverAcc.customerId, receiverCust.id))
+        .where(whereClause),
+      db
       .select({
         id: transactions.id,
         referenceNumber: transactions.referenceNumber,
@@ -516,9 +639,14 @@ async addBeneficiary(accountId: number, dto: { name: string; accountNumber: stri
       .leftJoin(senderCust, eq(senderAcc.customerId, senderCust.id))
       .leftJoin(receiverAcc, eq(transactions.receiverAccountId, receiverAcc.id))
       .leftJoin(receiverCust, eq(receiverAcc.customerId, receiverCust.id))
-      .orderBy(desc(transactions.createdAt));
+      .where(whereClause)
+      .orderBy(desc(transactions.createdAt), desc(transactions.id))
+      .limit(limit)
+      .offset(offset),
+    ]);
 
-    return rawTransactions.map((tx) => ({
+    return {
+      transactions: rawTransactions.map((tx) => ({
       id: tx.id,
       referenceNumber: tx.referenceNumber,
       idempotencyKey: tx.idempotencyKey,
@@ -542,7 +670,14 @@ async addBeneficiary(accountId: number, dto: { name: string; accountNumber: stri
       description: tx.description,
       createdAt: tx.createdAt,
       completedAt: tx.completedAt,
-    }));
+      })),
+      pagination: {
+        page,
+        limit,
+        total: Number(totalResult[0]?.total ?? 0),
+        totalPages: Math.ceil(Number(totalResult[0]?.total ?? 0) / limit),
+      },
+    };
   }
 
 
@@ -946,6 +1081,125 @@ getStatementData = async ({
     closingBalance: runningBalance,
     transactions: statementTransactions,
   };
-};
+}
+  // loan section
+  async createLoanAccount(payload: {
+    customerId: number;
+    type: 'PERSONAL' | 'HOME' | 'AUTO' | 'EDUCATION';
+    principalAmount: number;
+    interestRate: number;
+    tenureMonths: number;
+  }) {
+    const { customerId, type, principalAmount, interestRate, tenureMonths } = payload;
+
+    // 1. Validate inputs to prevent division by zero or negative loans
+    if (principalAmount <= 0 || interestRate <= 0 || tenureMonths <= 0) {
+      throw new AppError(400, 'Principal, interest rate, and tenure must be strictly positive values.');
+    }
+
+    // 2. Verify Customer Exists
+    const [customerExists] = await db
+      .select({ id: customers.id })
+      .from(customers)
+      .where(eq(customers.id, customerId))
+      .limit(1);
+
+    if (!customerExists) {
+      throw new AppError(404, 'Customer not found');
+    }
+    // Formula: EMI = P * r * (1+r)^n / ((1+r)^n - 1)
+    const r = interestRate / 12 / 100; // Monthly interest rate
+    const calculatedEmi = (principalAmount * r * Math.pow(1 + r, tenureMonths)) / (Math.pow(1 + r, tenureMonths) - 1);
+
+    //Calculate First EMI Date (1 Month from today)
+    const nextEmiDate = new Date();
+    nextEmiDate.setMonth(nextEmiDate.getMonth() + 1);
+
+    // 5. Generate a unique, readable Loan Number
+    const loanNumber = `LN${Date.now().toString().slice(-6)}${Math.floor(Math.random() * 1000)}`;
+
+    // 6. Insert into Database
+    const [newLoan] = await db
+      .insert(loans)
+      .values({
+        loanNumber,
+        customerId,
+        type,
+        status: 'ACTIVE',
+        principalAmount: principalAmount.toFixed(2),
+        outstandingBalance: principalAmount.toFixed(2), // Initially, outstanding == principal
+        interestRate: interestRate.toFixed(2),
+        tenureMonths,
+        emiAmount: calculatedEmi.toFixed(2),
+        nextEmiDate,
+        disbursedAt: new Date(),
+      })
+      .returning();
+
+    return newLoan;
+  }
+  async processLoanRepayment(accountId: number, loanId: string, paymentType: 'EMI' | 'FULL') {
+    return await db.transaction(async (tx) => {
+      // 1. Lock the sender's account and the loan account
+      const [account] = await tx.select().from(accounts).where(eq(accounts.customerId, accountId)).for('update');
+      const [loan] = await tx.select().from(loans).where(eq(loans.id, loanId)).for('update');
+
+      if (!account) throw new AppError(404, 'Source account not found');
+      if (!loan) throw new AppError(404, 'Loan account not found');
+      if (loan.status !== 'ACTIVE') throw new AppError(400, `Cannot process payment. Loan is ${loan.status}`);
+
+      // 2. Determine the exact payment amount
+      const amountToPay = paymentType === 'EMI' 
+        ? Number(loan.emiAmount) 
+        : Number(loan.outstandingBalance);
+
+      if (amountToPay <= 0) throw new AppError(400, 'No outstanding balance to pay');
+
+      // 3. Verify sufficient funds in the primary account
+      const currentBalance = Number(account.balance);
+      if (currentBalance < amountToPay) {
+        throw new AppError(400, `Insufficient funds. Need ₹${amountToPay.toFixed(2)}, but available balance is ₹${currentBalance.toFixed(2)}`);
+      }
+
+      // 4. Calculate new balances
+      const newAccountBalance = (currentBalance - amountToPay).toFixed(2);
+      const newLoanBalance = (Number(loan.outstandingBalance) - amountToPay).toFixed(2);
+      const newLoanStatus = Number(newLoanBalance) <= 0.01 ? 'CLOSED' : 'ACTIVE'; // 0.01 to handle float rounding
+
+      // 5. Advance the next EMI date if it was a standard EMI payment
+      const nextEmiDate = new Date(loan.nextEmiDate || new Date());
+      if (paymentType === 'EMI') {
+        nextEmiDate.setMonth(nextEmiDate.getMonth() + 1);
+      }
+
+      // 6. Execute updates
+      await tx.update(accounts)
+        .set({ balance: newAccountBalance, availableBalance: newAccountBalance, updatedAt: new Date() })
+        .where(eq(accounts.id, accountId));
+
+      await tx.update(loans)
+        .set({ 
+          outstandingBalance: newLoanBalance, 
+          status: newLoanStatus, 
+          nextEmiDate: paymentType === 'EMI' ? nextEmiDate : loan.nextEmiDate 
+        })
+        .where(eq(loans.id, loanId));
+
+      // 7. Record the ledger transaction
+      const referenceNumber = `LOAN-PAY-${Date.now()}`;
+      await tx.insert(transactions).values({
+        referenceNumber,
+        idempotencyKey: randomUUID(),
+        senderAccountId: accountId,
+        amount: amountToPay.toFixed(2),
+        currency: 'INR',
+        type: 'TRANSFER',
+        status: 'COMPLETED',
+        description: paymentType === 'EMI' ? `EMI Payment for Loan ${loan.loanNumber}` : `Full Settlement for Loan ${loan.loanNumber}`,
+      });
+
+      return { amountPaid: amountToPay, newLoanBalance, status: newLoanStatus };
+    });
+  }
 }
 export const adminService = new AdminService();
