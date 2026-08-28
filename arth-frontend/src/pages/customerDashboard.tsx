@@ -44,7 +44,7 @@ export default function CustomerDashboard() {
   const [isDepositModalOpen, setIsDepositModalOpen] = useState(false);
   const [isWithdrawModalOpen, setIsWithdrawModalOpen] = useState(false);
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
-  const [beneficiaries, setBeneficiaries] = useState<any[]>([]);
+  const [_beneficiaries, setBeneficiaries] = useState<any[]>([]);
   const [isTakeLoanModalOpen, setIsTakeLoanModalOpen] = useState(false);
 
 // ... inside CustomerDashboard ...

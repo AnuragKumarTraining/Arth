@@ -32,7 +32,7 @@ interface CommonFormProps {
     formData: Record<string, any>;
     setFormData: React.Dispatch<React.SetStateAction<any>>;
     buttonText?: string;
-    onHandleSubmit: (event) => void;
+    onHandleSubmit: (event: FormEvent) => void;
 }
 
 // 3. Component Implementation

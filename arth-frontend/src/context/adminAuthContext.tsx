@@ -10,7 +10,7 @@ const AdminAuthContext = createContext<AuthContextType>({
   logout: async () => {},
 });
 
-export const AdminAuthProvider = ({ children }) => {
+export const AdminAuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [admin, setAdmin] = useState<AdminUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 

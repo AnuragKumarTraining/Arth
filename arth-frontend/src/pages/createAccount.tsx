@@ -3,9 +3,9 @@ import { useNavigate } from 'react-router-dom';
 import { Navbar } from '../components/navbar';
 import CommonForm from '../components/common-form/common-form';
 import { registerFormElements } from '../config/register-input-values';
-// import { env } from '../config/env';
+import { env } from '../config/env';
 
-const API_BASE =  "http://localhost:5011/api/auth"
+const API_BASE = env.authBase;
 
 export default function Register() {
   const [step, setStep] = useState<'form' | 'otp' | 'success'>('form');

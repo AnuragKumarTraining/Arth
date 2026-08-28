@@ -1,5 +1,13 @@
+const isProduction = import.meta.env.PROD;
+
+const defaultApiBase = isProduction
+  ? 'https://arth-backend-xyz-uc.a.run.app/api'
+  : 'http://localhost:5011/api';
+
+const apiBase = import.meta.env.VITE_API_BASE || defaultApiBase;
+
 export const env = {
-  apiBase: import.meta.env.VITE_API_BASE || 'http://localhost:5011/api',
-  authBase: import.meta.env.VITE_API_BASE_AUTH || 'http://localhost:5011/api/auth',
-  adminBase: import.meta.env.VITE_API_ADMIN || 'http://localhost:5011/api/admin',
+  apiBase,
+  authBase: import.meta.env.VITE_API_BASE_AUTH || `${apiBase}/auth`,
+  adminBase: import.meta.env.VITE_API_ADMIN || `${apiBase}/admin`,
 } as const;

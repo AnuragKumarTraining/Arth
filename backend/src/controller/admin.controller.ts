@@ -542,8 +542,8 @@ getStatementPreview = async (req: Request, res: Response) => {
   };
 processLoanPayment = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
-      const accountId = parseInt(req.params.id, 10);
-      const { loanId } = req.params;
+      const accountId = parseInt(req.params.id as string, 10);
+      const loanId = req.params.loanId as string;
       const { paymentType } = req.body; // 'EMI' or 'FULL'
 
       if (isNaN(accountId)) throw new AppError(400, 'Invalid account ID');

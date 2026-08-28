@@ -13,7 +13,7 @@ import DispatchCollectors from './pages/dispatchCollectors';
 import { AdminAuthProvider, useAdminAuth } from './context/adminAuthContext';
 import ProtectedAdminRoute from './routes/protectAdminRoutes';
 
-function RedirectIfAuthenticated({ children }) {
+function RedirectIfAuthenticated({ children }: { children: React.ReactNode }) {
   const { admin } = useAdminAuth();
 
   if (admin) {

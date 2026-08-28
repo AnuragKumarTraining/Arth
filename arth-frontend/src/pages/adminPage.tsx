@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Navbar } from '../components/navbar';
 import type { UserAccount } from '../config/user-account';
+import { env } from '../config/env';
 
 export default function StaffDashboard() {
   const navigate = useNavigate();
@@ -16,7 +17,7 @@ export default function StaffDashboard() {
   const ITEMS_PER_PAGE = 5;
   const [totalUsers, setTotalUsers] = useState(0);
 
-  const base = "http://localhost:5011/api/admin";
+  const base = env.adminBase;
 
   useEffect(() => {
     const timer = window.setTimeout(() => {

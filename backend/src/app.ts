@@ -20,8 +20,12 @@ export function createApp(){
 
     app.use(express.json());
     app.use(cookieParser());
+    const corsOrigin = env.corsOrigin.includes(',')
+        ? env.corsOrigin.split(',').map((origin) => origin.trim())
+        : env.corsOrigin;
+
     app.use(cors({
-        origin: 'http://localhost:5173',
+        origin: corsOrigin,
         credentials: true,
     }));
     app.use(express.urlencoded({
