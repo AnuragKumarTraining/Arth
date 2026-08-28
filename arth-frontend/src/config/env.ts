@@ -1,8 +1,4 @@
-const isProduction = import.meta.env.PROD;
-
-const defaultApiBase = isProduction
-  ? 'https://arth-backend-xyz-uc.a.run.app/api'
-  : 'http://localhost:5011/api';
+const defaultApiBase = 'http://localhost:5011/api';
 
 const apiBase = import.meta.env.VITE_API_BASE || defaultApiBase;
 

@@ -2,8 +2,6 @@ import dotenv from "dotenv";
 
 dotenv.config();
 
-const isProduction = process.env.NODE_ENV === 'production';
-
 function getEnv(key: string, defaultValue?: string): string {
     const value = process.env[key] || defaultValue;
     if (!value) {
@@ -13,7 +11,7 @@ function getEnv(key: string, defaultValue?: string): string {
 }
 
 export const env = {
-    port: Number(process.env.PORT || (isProduction ? 8080 : 5011)),
+    port: Number(process.env.PORT || 5011),
     dbUrl: getEnv("DATABASE_URL"),
     adminJwtSecret: getEnv("ADMIN_JWT_SECRET"),
     host: getEnv("SMTP_HOST"),
@@ -26,6 +24,6 @@ export const env = {
     expire_cookie: Number(getEnv('EIGHT_HOURS_MS', '28800000')),
     admin: getEnv('ADMIN_EMAIL'),
     adminP: getEnv('ADMIN_PASSWORD'),
-    corsOrigin: process.env.CORS_ORIGIN || (isProduction ? 'https://arth-frontend-xyz-uc.a.run.app' : 'http://localhost:5173'),
-    isProduction,
+    corsOrigin: process.env.CORS_ORIGIN || 'http://localhost:5173',
+    isProduction: process.env.NODE_ENV === 'production',
 } as const;
