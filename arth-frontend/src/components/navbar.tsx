@@ -1,12 +1,11 @@
-import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 
-export const Navbar: React.FC = () => {
+export const Navbar = () => {
   const location = useLocation();
 
   const isActive = (path: string) => location.pathname === path;
 
- return (
+  return (
     <nav className="w-full px-6 py-4 bg-slate-900 border-b border-slate-800 transition-colors">
       <div className="max-w-7xl mx-auto flex items-center justify-between">
         <Link to="/admin" className="text-xl font-bold tracking-tight text-white flex items-center gap-1">
@@ -20,43 +19,39 @@ export const Navbar: React.FC = () => {
         <div className="flex space-x-6 items-center">
           <Link
             to="/admin"
-            className={`text-sm font-medium transition-colors ${
-              isActive('/admin')
+            className={`text-sm font-medium transition-colors ${isActive('/admin')
                 ? 'text-white font-semibold'
                 : 'text-slate-300 hover:text-white'
-            }`}
+              }`}
           >
             All Accounts
           </Link>
 
           <Link
             to="/admin/transactions"
-            className={`text-sm font-medium transition-colors ${
-              isActive('/admin/transactions')
+            className={`text-sm font-medium transition-colors ${isActive('/admin/transactions')
                 ? 'text-white font-semibold'
                 : 'text-slate-300 hover:text-white'
-            }`}
+              }`}
           >
             Transactions
           </Link>
 
           <Link
             to="/admin/kyc"
-            className={`text-sm font-medium transition-colors ${
-              isActive('/admin/kyc')
+            className={`text-sm font-medium transition-colors ${isActive('/admin/kyc')
                 ? 'text-white font-semibold'
                 : 'text-slate-300 hover:text-white'
-            }`}
+              }`}
           >
             KYC
           </Link>
           <Link
             to="/admin/collectors"
-            className={`text-sm font-medium transition-colors ${
-              isActive('/admin/collectors')
+            className={`text-sm font-medium transition-colors ${isActive('/admin/collectors')
                 ? 'text-white font-semibold'
                 : 'text-slate-300 hover:text-white'
-            }`}
+              }`}
           >
             Dispatch Collectors
           </Link>

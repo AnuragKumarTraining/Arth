@@ -1,6 +1,6 @@
-import type { FormElement } from "../components/common-form/common-form";
+import type { FormElement } from "../../components/common-form/common-form";
 
-export const registerFormElements:FormElement[] = [
+export const registerFormElements: FormElement[] = [
   {
     name: "firstName",
     id: "firstName",
@@ -26,23 +26,23 @@ export const registerFormElements:FormElement[] = [
     type: "email"
   },
   {
-  name: "password",
-  id: "password",
-  placeholder: "Enter your password",
-  label: "Password",
-  componentType: "input",
-  type: "password",
-  autoComplete: "new-password"
-},
-{
-  name: "confirmPassword",
-  id: "confirmPassword",
-  placeholder: "Re-enter password",
-  label: "Confirm Password",
-  componentType: "input",
-  type: "password",
-  autoComplete: "new-password"
-},
+    name: "password",
+    id: "password",
+    placeholder: "Enter your password",
+    label: "Password",
+    componentType: "input",
+    type: "password",
+    autoComplete: "new-password"
+  },
+  {
+    name: "confirmPassword",
+    id: "confirmPassword",
+    placeholder: "Re-enter password",
+    label: "Confirm Password",
+    componentType: "input",
+    type: "password",
+    autoComplete: "new-password"
+  },
   {
     name: "dateOfBirth",
     id: "dateOfBirth",
@@ -92,7 +92,7 @@ export const registerFormElements:FormElement[] = [
     label: "Branch",
     componentType: "select",
     options: [
-      { id: "ARTH001", label: "ARTH001 - Main Branch" } 
+      { id: "ARTH001", label: "ARTH001 - Main Branch" }
     ]
   }
 ];

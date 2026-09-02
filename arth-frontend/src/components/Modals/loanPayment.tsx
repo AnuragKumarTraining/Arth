@@ -1,24 +1,10 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { env } from '../../config/env';
+import type { LoanPaymentModalProps } from '../../config/types/loanPayment';
 
 const API_BASE = env.adminBase;
 
-export interface LoanPaymentConfig {
-  isOpen: boolean;
-  loanId: string;
-  loanNumber: string;
-  type: 'EMI' | 'FULL';
-  amount: number;
-}
-
-interface LoanPaymentModalProps {
-  config: LoanPaymentConfig;
-  onClose: () => void;
-  accountId: string | undefined;
-  onSuccess: () => void;
-}
-
-export const LoanPaymentModal: React.FC<LoanPaymentModalProps> = ({ config, onClose, accountId, onSuccess }) => {
+export const LoanPaymentModal = ({ config, onClose, accountId, onSuccess }: LoanPaymentModalProps) => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [message, setMessage] = useState({ text: '', isError: false });
 

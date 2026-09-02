@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { env } from '../../config/env';
-import type { CustomerProfile } from '../../config/customer-input';
+import type { CustomerProfile } from '../../config/types/customer-input';
 
 interface AccountSettingsModalProps {
   isOpen: boolean;
@@ -9,12 +9,12 @@ interface AccountSettingsModalProps {
   onCustomerUpdated?: (updated: Partial<CustomerProfile>) => void;
 }
 
-export const AccountSettingsModal: React.FC<AccountSettingsModalProps> = ({
+export const AccountSettingsModal = ({
   isOpen,
   onClose,
   customer,
   onCustomerUpdated,
-}) => {
+}: AccountSettingsModalProps) => {
   const customerId = customer.id || customer.customerId;
 
   const [email, setEmail] = useState(customer.email || '');

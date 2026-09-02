@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Navbar } from '../components/navbar';
 import CommonForm from '../components/common-form/common-form';
-import { registerFormElements } from '../config/register-input-values';
+import { registerFormElements } from '../config/types/register-input-values';
 import { env } from '../config/env';
 
 const API_BASE = env.authBase;
@@ -26,17 +26,28 @@ export default function Register() {
     return () => clearInterval(timerId);
   }, [step, timeLeft]);
 
-  const handleRegisterSubmit = async (event:any) => {
+  const handleRegisterSubmit = async (event: any) => {
     event.preventDefault();
     setGlobalError('');
     if (formData.password !== formData.confirmPassword) {
       setGlobalError('Passwords do not match.');
       return;
-    } 
+    }
     setIsLoading(true);
 
     try {
-      const { confirmPassword, ...payload } = formData;
+      const payload = {
+        firstName: formData.firstName,
+        lastName: formData.lastName,
+        email: formData.email,
+        password: formData.password,
+        dateOfBirth: formData.dateOfBirth,
+        phoneNumber: formData.phoneNumber,
+        nationalId: formData.nationalId,
+        address: formData.address,
+        accountType: formData.accountType,
+        branchId: formData.branchId,
+      };
 
       const res = await fetch(`${API_BASE}/createAccount`, {
         method: 'POST',
@@ -58,7 +69,7 @@ export default function Register() {
     }
   };
 
-  const handleOtpSubmit = async (event:any) => {
+  const handleOtpSubmit = async (event: any) => {
     event.preventDefault();
     setGlobalError('');
     setIsLoading(true);
@@ -83,39 +94,39 @@ export default function Register() {
       setIsLoading(false);
     }
   };
-const handleResendOtp = async (event:any) => {
-  if (event) event.preventDefault();
-  if (timeLeft > 0) return;
+  const handleResendOtp = async (event: any) => {
+    if (event) event.preventDefault();
+    if (timeLeft > 0) return;
 
-  setGlobalError('');
-  setIsResending(true);
+    setGlobalError('');
+    setIsResending(true);
 
-  try {
-    const res = await fetch(`${API_BASE}/resendOtp`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email: formData.email }),
-    });
+    try {
+      const res = await fetch(`${API_BASE}/resendOtp`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: formData.email }),
+      });
 
-    const data = await res.json();
+      const data = await res.json();
 
-    if (!res.ok) {
-      throw new Error(data.error || 'Failed to resend OTP. Please try again.');
+      if (!res.ok) {
+        throw new Error(data.error || 'Failed to resend OTP. Please try again.');
+      }
+
+      // Reset countdown timer on success
+      setTimeLeft(59);
+    } catch (err: any) {
+      setGlobalError(err.message || 'An unexpected error occurred.');
+    } finally {
+      setIsResending(false);
     }
-
-    // Reset countdown timer on success
-    setTimeLeft(59);
-  } catch (err: any) {
-    setGlobalError(err.message || 'An unexpected error occurred.');
-  } finally {
-    setIsResending(false);
-  }
-};
+  };
   return (
     <div className="min-h-screen bg-slate-50">
       <Navbar />
       <div className="flex items-center justify-center py-12 px-4">
-        
+
         {step === 'form' && (
           <div className="w-full max-w-md p-8 bg-white border border-slate-200 rounded-xl shadow-sm">
             <h2 className="text-2xl font-semibold text-slate-900">Create your account</h2>
@@ -141,7 +152,7 @@ const handleResendOtp = async (event:any) => {
           <div className="w-full max-w-md p-8 bg-white border rounded-xl shadow-sm border-slate-200">
             <h2 className="text-2xl font-semibold text-slate-900">Verify your email</h2>
             <p className="mt-2 text-sm text-slate-600 mb-6">We've sent a 6-digit code to {formData.email}.</p>
-            
+
             {globalError && (
               <div className="p-3 mb-4 text-sm text-red-700 bg-red-50 border border-red-200 rounded-md">
                 {globalError}
@@ -170,26 +181,26 @@ const handleResendOtp = async (event:any) => {
                 {isLoading ? 'Verifying...' : 'Verify Account'}
               </button>
             </form>
-             <div className="mt-4 text-center">
-    {timeLeft > 0 ? (
-      <p className="text-sm text-slate-500 dark:text-slate-400">
-        Resend OTP in <span className="font-medium text-slate-700 dark:text-slate-300">0:{timeLeft.toString().padStart(2, '0')}</span>
-      </p>
-    ) : (
-      <button
-        type="button"
-        onClick={handleResendOtp}
-        disabled={isResending || isLoading}
-        className="text-sm font-medium text-blue-600 hover:underline hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-      >
-        {isResending ? 'Sending...' : 'Resend OTP'}
-      </button>
-    )}
-  </div>
+            <div className="mt-4 text-center">
+              {timeLeft > 0 ? (
+                <p className="text-sm text-slate-500 dark:text-slate-400">
+                  Resend OTP in <span className="font-medium text-slate-700 dark:text-slate-300">0:{timeLeft.toString().padStart(2, '0')}</span>
+                </p>
+              ) : (
+                <button
+                  type="button"
+                  onClick={handleResendOtp}
+                  disabled={isResending || isLoading}
+                  className="text-sm font-medium text-blue-600 hover:underline hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  {isResending ? 'Sending...' : 'Resend OTP'}
+                </button>
+              )}
+            </div>
           </div>
-          
+
         )}
-       
+
 
         {step === 'success' && (
           <div className="w-full max-w-md p-8 bg-white border rounded-xl shadow-sm border-slate-200 text-center">

@@ -1,21 +1,15 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { env } from '../../config/env';
+import type { TakeLoanModalProps } from '../../config/types/loanModal';
 
 const API_BASE = env.adminBase;
 
-interface TakeLoanModalProps {
-  isOpen: boolean;
-  onClose: () => void;
-  customerId: number | undefined;
-  onSuccess: () => void;
-}
-
-export const TakeLoanModal: React.FC<TakeLoanModalProps> = ({
+export const TakeLoanModal = ({
   isOpen,
   onClose,
   customerId,
   onSuccess,
-}) => {
+}: TakeLoanModalProps) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [message, setMessage] = useState({ text: '', isError: false });
 

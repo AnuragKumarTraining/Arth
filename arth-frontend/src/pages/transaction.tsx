@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo, useCallback } from 'react';
 import { Navbar } from '../components/navbar';
 import { env } from '../config/env';
 export interface AdminTransaction {
@@ -43,7 +43,7 @@ export default function Transactions() {
   // Selected Transaction for Details Modal
   const [selectedTx, setSelectedTx] = useState<AdminTransaction | null>(null);
 
-  const fetchTransactions = async () => {
+  const fetchTransactions = useCallback(async () => {
     setIsLoading(true);
     setFeedback(null);
     try {
@@ -72,11 +72,11 @@ export default function Transactions() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [currentPage, itemsPerPage, searchQuery, statusFilter, typeFilter, fromDate, toDate]);
 
   useEffect(() => {
     fetchTransactions();
-  }, [currentPage, itemsPerPage, searchQuery, statusFilter, typeFilter, fromDate, toDate]);
+  }, [fetchTransactions]);
 
   // Reset to page 1 whenever filter parameters change
   useEffect(() => {

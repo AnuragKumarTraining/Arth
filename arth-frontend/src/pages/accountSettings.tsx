@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo, useCallback } from 'react';
 import { useParams } from 'react-router-dom';
 import { Navbar } from '../components/navbar';
 import { env } from '../config/env';
@@ -44,15 +44,40 @@ export default function AccountSettings() {
   const [otpCooldown, setOtpCooldown] = useState<number>(0);
   const [feedback, setFeedback] = useState<{ message: string; isError: boolean } | null>(null);
 
+  const handleSelectCustomer = useCallback((cust: CustomerRecord) => {
+    setSelectedCustomerId(cust.id);
+    setEmail(cust.email || '');
+    setFirstName(cust.firstName || '');
+    setLastName(cust.lastName || '');
+    setPhoneNumber(cust.phoneNumber || '');
+    setAddress(cust.address || '');
+
+    if (cust.dateOfBirth) {
+      const d = new Date(cust.dateOfBirth);
+      if (!isNaN(d.getTime())) {
+        setDateOfBirth(d.toISOString().split('T')[0]);
+      } else {
+        setDateOfBirth(String(cust.dateOfBirth));
+      }
+    } else {
+      setDateOfBirth('');
+    }
+
+    setIsUnlocked(false);
+    setOtp('');
+    setOtpSent(false);
+    setFeedback(null);
+  }, []);
+
   // Fetch users
-  const fetchCustomers = async () => {
+  const fetchCustomers = useCallback(async () => {
     setIsLoading(true);
     setFeedback(null);
     try {
       const res = await fetch(`${env.adminBase}/users`, { credentials: 'include' });
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || 'Failed to fetch customers');
-      
+
       const list: CustomerRecord[] = data.users || [];
       setCustomersList(list);
 
@@ -75,11 +100,11 @@ export default function AccountSettings() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [paramId, selectedCustomerId, handleSelectCustomer]);
 
   useEffect(() => {
     fetchCustomers();
-  }, []);
+  }, [fetchCustomers]);
 
   // Cooldown countdown timer
   useEffect(() => {
@@ -89,31 +114,6 @@ export default function AccountSettings() {
     }, 1000);
     return () => clearInterval(timer);
   }, [otpCooldown]);
-
-  const handleSelectCustomer = (cust: CustomerRecord) => {
-    setSelectedCustomerId(cust.id);
-    setEmail(cust.email || '');
-    setFirstName(cust.firstName || '');
-    setLastName(cust.lastName || '');
-    setPhoneNumber(cust.phoneNumber || '');
-    setAddress(cust.address || '');
-    
-    if (cust.dateOfBirth) {
-      const d = new Date(cust.dateOfBirth);
-      if (!isNaN(d.getTime())) {
-        setDateOfBirth(d.toISOString().split('T')[0]);
-      } else {
-        setDateOfBirth(String(cust.dateOfBirth));
-      }
-    } else {
-      setDateOfBirth('');
-    }
-
-    setIsUnlocked(false);
-    setOtp('');
-    setOtpSent(false);
-    setFeedback(null);
-  };
 
   const selectedCustomer = useMemo(() => {
     return customersList.find((c) => c.id === selectedCustomerId) || null;
@@ -272,9 +272,8 @@ export default function AccountSettings() {
         {/* Global Feedback Alert */}
         {feedback && (
           <div
-            className={`p-4 mb-6 rounded-lg text-sm border flex justify-between items-center ${
-              feedback.isError ? 'bg-rose-50 text-rose-700 border-rose-200' : 'bg-emerald-50 text-emerald-700 border-emerald-200'
-            }`}
+            className={`p-4 mb-6 rounded-lg text-sm border flex justify-between items-center ${feedback.isError ? 'bg-rose-50 text-rose-700 border-rose-200' : 'bg-emerald-50 text-emerald-700 border-emerald-200'
+              }`}
           >
             <div className="flex items-center gap-2">
               <span className="font-semibold">{feedback.isError ? 'Error:' : 'Success:'}</span>
@@ -323,11 +322,10 @@ export default function AccountSettings() {
                     <div
                       key={cust.id}
                       onClick={() => handleSelectCustomer(cust)}
-                      className={`p-3 rounded-lg border cursor-pointer transition-all ${
-                        isSelected
+                      className={`p-3 rounded-lg border cursor-pointer transition-all ${isSelected
                           ? 'border-blue-500 bg-blue-50/60 shadow-sm'
                           : 'border-slate-200 hover:border-slate-300 hover:bg-slate-50'
-                      }`}
+                        }`}
                     >
                       <div className="flex justify-between items-start">
                         <div>
@@ -337,11 +335,10 @@ export default function AccountSettings() {
                           <p className="text-xs text-slate-500 font-mono mt-0.5">{cust.email}</p>
                         </div>
                         <span
-                          className={`text-[10px] font-semibold px-2 py-0.5 rounded border uppercase ${
-                            cust.isActive
+                          className={`text-[10px] font-semibold px-2 py-0.5 rounded border uppercase ${cust.isActive
                               ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
                               : 'bg-amber-50 text-amber-700 border-amber-200'
-                          }`}
+                            }`}
                         >
                           {cust.isActive ? 'Active' : 'Inactive'}
                         </span>
@@ -406,8 +403,8 @@ export default function AccountSettings() {
                         {isSendingOtp
                           ? 'Sending OTP...'
                           : otpCooldown > 0
-                          ? `Resend OTP (${otpCooldown}s)`
-                          : 'Send OTP to Customer Email'}
+                            ? `Resend OTP (${otpCooldown}s)`
+                            : 'Send OTP to Customer Email'}
                       </button>
                     </div>
 

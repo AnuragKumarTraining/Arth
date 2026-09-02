@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { env } from '../../config/env';
-import type { WithdrawFormData, WithdrawModalProps } from '../../config/withDrawModal';
+import type { WithdrawFormData, WithdrawModalProps } from '../../config/types/withDrawModal';
 export function WithdrawModal({
   isOpen,
   onClose,
@@ -142,11 +142,10 @@ export function WithdrawModal({
         {/* Feedback Message */}
         {message.text && (
           <div
-            className={`p-3 mb-4 text-sm rounded border ${
-              message.isError
+            className={`p-3 mb-4 text-sm rounded border ${message.isError
                 ? 'bg-red-50 text-red-700 border-red-200'
                 : 'bg-green-50 text-green-700 border-green-200'
-            }`}
+              }`}
           >
             {message.text}
           </div>

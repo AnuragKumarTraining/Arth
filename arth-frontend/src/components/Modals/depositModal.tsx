@@ -1,17 +1,6 @@
 import { useState } from 'react';
 import { env } from '../../config/env';
-
-interface DepositModalProps {
-  isOpen: boolean;
-  onClose: () => void;
-  accountId?: string;
-  onSuccess: () => void;
-}
-
-interface DepositFormData {
-  amount: string;
-  description: string;
-}
+import type { DepositModalProps, DepositFormData } from '../../config/types/depositModal';
 
 export function DepositModal({
   isOpen,

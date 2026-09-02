@@ -2,14 +2,15 @@ import { useEffect, useState, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Navbar } from '../components/navbar';
 import { env } from '../config/env';
-import type { AccountDetails, CustomerProfile } from '../config/customer-input';
-import type { Transaction } from '../config/transaction';
+import type { AccountDetails, CustomerProfile } from '../config/types/customer-input';
+import type { Transaction } from '../config/types/transaction';
 import { TransferModal } from '../components/Modals/transferModal';
 import { DepositModal } from '../components/Modals/depositModal';
 import { WithdrawModal } from '../components/Modals/withdrawModal';
 import { AccountSettingsModal } from '../components/Modals/accountSettingsModal';
 import { TakeLoanModal } from '../components/Modals/loanModal';
-import { LoanPaymentModal, type LoanPaymentConfig } from '../components/Modals/loanPayment';
+import { LoanPaymentModal } from '../components/Modals/loanPayment';
+import type { LoanPaymentConfig } from '../config/types/loanPayment';
 
 const API_BASE = env.adminBase;
 
@@ -34,7 +35,7 @@ export default function CustomerDashboard() {
   const [customer, setCustomer] = useState<CustomerProfile | null>(null);
   const [account, setAccount] = useState<AccountDetails | null>(null);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
-  
+
   // Loan state management.
   const [loans, setLoans] = useState<LoanDetails[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -47,10 +48,10 @@ export default function CustomerDashboard() {
   const [_beneficiaries, setBeneficiaries] = useState<any[]>([]);
   const [isTakeLoanModalOpen, setIsTakeLoanModalOpen] = useState(false);
 
-// ... inside CustomerDashboard ...
-const [paymentConfig, setPaymentConfig] = useState<LoanPaymentConfig>({
-  isOpen: false, loanId: '', loanNumber: '', type: 'EMI', amount: 0
-});
+  // ... inside CustomerDashboard ...
+  const [paymentConfig, setPaymentConfig] = useState<LoanPaymentConfig>({
+    isOpen: false, loanId: '', loanNumber: '', type: 'EMI', amount: 0
+  });
   // Search filter and pagination states.
   const [searchQuery, setSearchQuery] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
@@ -59,43 +60,43 @@ const [paymentConfig, setPaymentConfig] = useState<LoanPaymentConfig>({
   const handleDeposit = async () => {
     setIsDepositModalOpen(true);
   };
-  
+
   const handleWithdraw = async () => {
     setIsWithdrawModalOpen(true);
   };
 
- const fetchAccountData = useCallback(async () => {
-  try {
-    const res = await fetch(`${API_BASE}/accounts/${id}`, {
-      method: 'GET',
-      credentials: 'include',
-      cache: 'no-store',
-    });
+  const fetchAccountData = useCallback(async () => {
+    try {
+      const res = await fetch(`${API_BASE}/accounts/${id}`, {
+        method: 'GET',
+        credentials: 'include',
+        cache: 'no-store',
+      });
 
-    if (!res.ok) {
-      throw new Error('Unauthorized session');
+      if (!res.ok) {
+        throw new Error('Unauthorized session');
+      }
+
+      const data = await res.json();
+
+      setCustomer(data.customer ?? null);
+      setAccount(data.account ?? null);
+      setTransactions(data.transactions ?? []);
+      setLoans(data.loans ?? []);
+
+    } catch (err) {
+      console.error('Failed to fetch account data:', err);
+      navigate('/admin/login');
+    } finally {
+      setIsLoading(false);
     }
-
-    const data = await res.json();
-
-    setCustomer(data.customer ?? null);
-    setAccount(data.account ?? null);
-    setTransactions(data.transactions ?? []);
-    setLoans(data.loans ?? []);
-
-  } catch (err) {
-    console.error('Failed to fetch account data:', err);
-    navigate('/admin/login');
-  } finally {
-    setIsLoading(false);
-  }
-}, [id, navigate]);
+  }, [id, navigate]);
 
   // Indicates whether account is marked inactive or frozen.
   const isFrozen = customer?.isActive === false;
   // Indicates whether account is a loan account.
   const isLoanAccount = account?.accountType?.toUpperCase() === 'LOAN';
-  
+
   useEffect(() => {
     fetchAccountData();
   }, [fetchAccountData]);
@@ -108,12 +109,12 @@ const [paymentConfig, setPaymentConfig] = useState<LoanPaymentConfig>({
   // Opens transfer modal and fetches customer beneficiaries.
   const handleOpenTransfer = async () => {
     setIsTransferModalOpen(true);
-    
+
     try {
       const res = await fetch(`${API_BASE}/accounts/${id}/beneficiaries`, { credentials: 'include' });
       const data = await res.json();
       if (res.ok) setBeneficiaries(data.beneficiaries || []);
-    } catch (err) {
+    } catch {
       console.error('Failed to fetch beneficiaries');
     }
   };
@@ -150,7 +151,7 @@ const [paymentConfig, setPaymentConfig] = useState<LoanPaymentConfig>({
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
             <h1 className="text-2xl sm:text-3xl font-bold text-slate-900">
-             {customer?.firstName || 'User'} {customer?.lastName || 'User'} 
+              {customer?.firstName || 'User'} {customer?.lastName || 'User'}
             </h1>
             <p className="text-sm text-slate-600 mt-1">
               Customer ID: #{customer?.customerId} &bull; {customer?.email}
@@ -182,12 +183,11 @@ const [paymentConfig, setPaymentConfig] = useState<LoanPaymentConfig>({
                   {account?.accountNumber || 'Processing Account Number...'}
                 </p>
               </div>
-              
-              <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                isFrozen 
-                  ? 'bg-rose-100 text-rose-800 border border-rose-200' 
-                  : 'bg-emerald-100 text-emerald-800 border border-emerald-200'
-              }`}>
+
+              <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${isFrozen
+                ? 'bg-rose-100 text-rose-800 border border-rose-200'
+                : 'bg-emerald-100 text-emerald-800 border border-emerald-200'
+                }`}>
                 {isFrozen ? 'FROZEN' : 'ACTIVE'}
               </span>
             </div>
@@ -317,14 +317,14 @@ const [paymentConfig, setPaymentConfig] = useState<LoanPaymentConfig>({
                 const primaryBalance = Number(account?.balance || 0);
                 const emiAmount = Number(loan.emiAmount);
                 const outstandingBalance = Number(loan.outstandingBalance);
-                
+
                 const isEmiDisabled = isFrozen || outstandingBalance <= 0 || primaryBalance < emiAmount;
                 const isFullDisabled = isFrozen || outstandingBalance <= 0 || primaryBalance < outstandingBalance;
 
                 return (
                   <div key={loan.id} className="p-6 sm:p-8 bg-white border border-slate-200 rounded-xl shadow-sm relative overflow-hidden">
                     <div className="absolute left-0 top-0 bottom-0 w-1 bg-indigo-500"></div>
-                    
+
                     <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
                       <div className="flex-1">
                         <div className="flex items-center gap-3 mb-1">
@@ -355,7 +355,7 @@ const [paymentConfig, setPaymentConfig] = useState<LoanPaymentConfig>({
                           <div>
                             <span className="text-xs text-slate-500 font-medium block mb-1">Next Payment</span>
                             <div className="text-sm font-medium text-slate-800 mt-1">
-                              {new Date(loan.nextEmiDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric'})}
+                              {new Date(loan.nextEmiDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
                             </div>
                           </div>
                           <div>
@@ -375,13 +375,13 @@ const [paymentConfig, setPaymentConfig] = useState<LoanPaymentConfig>({
                             <span>{Math.max(0, progressPercentage).toFixed(1)}%</span>
                           </div>
                           <div className="w-full bg-slate-100 rounded-full h-2">
-                            <div 
-                              className="bg-indigo-500 h-2 rounded-full transition-all duration-500" 
+                            <div
+                              className="bg-indigo-500 h-2 rounded-full transition-all duration-500"
                               style={{ width: `${Math.max(0, Math.min(100, progressPercentage))}%` }}
                             ></div>
                           </div>
                         </div>
-                        
+
                         <div className="grid grid-cols-2 gap-3">
                           <button
                             type="button"
@@ -398,7 +398,7 @@ const [paymentConfig, setPaymentConfig] = useState<LoanPaymentConfig>({
                           >
                             Pay EMI
                           </button>
-                          
+
                           <button
                             type="button"
                             onClick={() => setPaymentConfig({
@@ -426,10 +426,10 @@ const [paymentConfig, setPaymentConfig] = useState<LoanPaymentConfig>({
 
         {/* Recent Transactions Section */}
         <div className="p-6 sm:p-8 bg-white border border-slate-200 rounded-xl shadow-sm">
-          
+
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
             <h3 className="text-lg font-semibold text-slate-900">Recent Transactions</h3>
-            
+
             <div className="relative w-full sm:w-72">
               <input
                 type="text"
@@ -491,7 +491,7 @@ const [paymentConfig, setPaymentConfig] = useState<LoanPaymentConfig>({
             <span className="text-xs text-slate-500">
               Showing {filteredTransactions.length === 0 ? 0 : (currentPage - 1) * ITEMS_PER_PAGE + 1} to {Math.min(currentPage * ITEMS_PER_PAGE, filteredTransactions.length)} of {filteredTransactions.length} entries
             </span>
-            
+
             <div className="flex items-center gap-2 text-sm">
               <button
                 onClick={() => setCurrentPage((p) => p - 1)}
