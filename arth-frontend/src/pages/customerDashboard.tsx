@@ -13,7 +13,7 @@ import { LoanPaymentModal, type LoanPaymentConfig } from '../components/Modals/l
 
 const API_BASE = env.adminBase;
 
-//Interface for Loan Data
+// Loan data interface specification.
 interface LoanDetails {
   id: string;
   loanNumber: string;
@@ -35,11 +35,11 @@ export default function CustomerDashboard() {
   const [account, setAccount] = useState<AccountDetails | null>(null);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   
-  // --- NEW: Loan State ---
+  // Loan state management.
   const [loans, setLoans] = useState<LoanDetails[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Modal State
+  // Modal visibility states.
   const [isTransferModalOpen, setIsTransferModalOpen] = useState(false);
   const [isDepositModalOpen, setIsDepositModalOpen] = useState(false);
   const [isWithdrawModalOpen, setIsWithdrawModalOpen] = useState(false);
@@ -51,7 +51,7 @@ export default function CustomerDashboard() {
 const [paymentConfig, setPaymentConfig] = useState<LoanPaymentConfig>({
   isOpen: false, loanId: '', loanNumber: '', type: 'EMI', amount: 0
 });
-  // Search & Pagination State 
+  // Search filter and pagination states.
   const [searchQuery, setSearchQuery] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const ITEMS_PER_PAGE = 5;
@@ -91,21 +91,21 @@ const [paymentConfig, setPaymentConfig] = useState<LoanPaymentConfig>({
   }
 }, [id, navigate]);
 
-  // Check if the account is explicitly marked as inactive/frozen
+  // Indicates whether account is marked inactive or frozen.
   const isFrozen = customer?.isActive === false;
-  // If the current view is for a Loan account
+  // Indicates whether account is a loan account.
   const isLoanAccount = account?.accountType?.toUpperCase() === 'LOAN';
   
   useEffect(() => {
     fetchAccountData();
   }, [fetchAccountData]);
 
-  // Reset to page 1 when search query changes
+  // Resets pagination page number when search query changes.
   useEffect(() => {
     setCurrentPage(1);
   }, [searchQuery]);
 
-  // Open Modal & Fetch Beneficiaries
+  // Opens transfer modal and fetches customer beneficiaries.
   const handleOpenTransfer = async () => {
     setIsTransferModalOpen(true);
     
@@ -118,7 +118,7 @@ const [paymentConfig, setPaymentConfig] = useState<LoanPaymentConfig>({
     }
   };
 
-  // Filter and slice transactions for the current page
+  // Filters and slices transaction records for active page.
   const filteredTransactions = transactions.filter((tx) =>
     tx.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
     tx.id.toLowerCase().includes(searchQuery.toLowerCase())

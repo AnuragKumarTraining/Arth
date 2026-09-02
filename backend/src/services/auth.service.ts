@@ -25,7 +25,7 @@ export class AuthService {
     const normalizedNationalId = nationalId.trim().toUpperCase();
     console.info(`[AuthService:initiateSignup] Starting signup initiation for: ${normalizedEmail}`);
 
-    // Check for existing customer by email, nationalId, or phone
+    // Checks for existing customer by email, national ID, or phone.
     const existingCustomer = await db
       .select({ id: customers.id, email: customers.email, nationalId: customers.nationalId })
       .from(customers)
@@ -112,7 +112,7 @@ export class AuthService {
 
     const record = pendingRecords[0];
 
-    // Expiration check
+    // Checks OTP expiration.
     const nowMs = Date.now();
     const expiresAtMs = new Date(record.expiresAt).getTime();
 
@@ -149,7 +149,7 @@ export class AuthService {
 
     try {
       await db.transaction(async (tx) => {
-        // defualt branch set to ARTH001 to avoid foreign key conflict.
+        // Sets default branch to ARTH001 to avoid foreign key constraint conflicts.
         const existingBranch = await tx
           .select()
           .from(branches)
@@ -195,7 +195,7 @@ export class AuthService {
         await tx.delete(pendingRegistrations).where(eq(pendingRegistrations.email, normalizedEmail));
       });
     } catch (err: any) {
-      // PostgreSQL unique constraint error code 23505
+      // Handles PostgreSQL unique constraint error (code 23505).
       if (err.code === '23505' || err.message?.includes('unique constraint')) {
         console.warn(`[AuthService:verifyAccount] Unique constraint violation during customer insert for: ${normalizedEmail}. Deleting pending record.`);
         await db.delete(pendingRegistrations).where(eq(pendingRegistrations.email, normalizedEmail));
@@ -259,4 +259,4 @@ export class AuthService {
 
 export const authService = new AuthService();
 
-// // jargon ---> upsert.
+// Handles record upsert operations.

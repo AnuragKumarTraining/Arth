@@ -160,7 +160,7 @@ export class AdminService {
       throw new AppError(400, 'INVALID_OR_EXPIRED_OTP');
     }
 
-    // Mark edit session as unlocked for 15 minutes
+    // Marks edit session as unlocked for 15 minutes.
     otpRecord.isUnlocked = true;
     otpRecord.unlockedExpiresAt = new Date(now + 15 * 60 * 1000);
 
@@ -192,7 +192,7 @@ export class AdminService {
       throw new AppError(403, 'EDIT_NOT_AUTHORIZED. Please verify the OTP sent to the registered email first.');
     }
 
-    // Check if email is being updated and check conflict
+    // Checks for email conflicts if email address is updated.
     let newEmailToSet: string | undefined = undefined;
     if (email && email.trim().toLowerCase() !== currentCustomer.email.toLowerCase()) {
       const normalizedNewEmail = email.trim().toLowerCase();
@@ -210,7 +210,7 @@ export class AdminService {
       newEmailToSet = normalizedNewEmail;
     }
 
-    // Consume edit session lock
+    // Consumes edit session lock.
     this.editOtpStore.delete(customerId);
 
     const updateFields: Record<string, any> = {
@@ -422,7 +422,7 @@ export class AdminService {
     if (amount <= 0) throw new AppError(400, 'Transfer amount must be greater than zero');
 
     return await db.transaction(async (tx) => {
-      //Locked the sender's account to prevent concurrent withdrawal race conditions
+      // Locks sender account to prevent concurrent withdrawal race conditions.
       const [account] = await tx
         .select()
         .from(accounts)
@@ -432,13 +432,13 @@ export class AdminService {
       if (!account) throw new AppError(404, 'Source account not found');
       if (account.status !== 'ACTIVE') throw new AppError(403, 'Account is not active');
 
-      //Validate sufficient funds
+      // Validates sufficient funds for transfer.
       const currentBalance = parseFloat(account.balance);
       if (currentBalance < amount) {
         throw new AppError(400, `Insufficient funds. Available: ₹${currentBalance.toFixed(2)}`);
       }
 
-      //Verify the beneficiary exists and belongs to this customer
+      // Verifies beneficiary existence and ownership.
       const [beneficiary] = await tx
         .select()
         .from(beneficiaries)
@@ -453,7 +453,7 @@ export class AdminService {
         throw new AppError(403, 'Cannot transfer to an unverified beneficiary');
       }
 
-      //Deducting the balances from sender's account
+      // Deducts balance from sender account.
       const newBalance = (currentBalance - amount).toFixed(2);
       await tx
         .update(accounts)
@@ -1092,12 +1092,12 @@ getStatementData = async ({
   }) {
     const { customerId, type, principalAmount, interestRate, tenureMonths } = payload;
 
-    // 1. Validate inputs to prevent division by zero or negative loans
+    // Validates inputs to prevent division by zero or negative loan amounts.
     if (principalAmount <= 0 || interestRate <= 0 || tenureMonths <= 0) {
       throw new AppError(400, 'Principal, interest rate, and tenure must be strictly positive values.');
     }
 
-    // 2. Verify Customer Exists
+    // Verifies customer existence.
     const [customerExists] = await db
       .select({ id: customers.id })
       .from(customers)
@@ -1111,7 +1111,7 @@ getStatementData = async ({
     const r = interestRate / 12 / 100; // Monthly interest rate
     const calculatedEmi = (principalAmount * r * Math.pow(1 + r, tenureMonths)) / (Math.pow(1 + r, tenureMonths) - 1);
 
-    //Calculate First EMI Date (1 Month from today)
+    // Calculates first EMI date (1 month from today).
     const nextEmiDate = new Date();
     nextEmiDate.setMonth(nextEmiDate.getMonth() + 1);
 
@@ -1140,7 +1140,7 @@ getStatementData = async ({
   }
   async processLoanRepayment(accountId: number, loanId: string, paymentType: 'EMI' | 'FULL') {
     return await db.transaction(async (tx) => {
-      // 1. Lock the sender's account and the loan account
+      // Locks sender account and loan account.
       const [account] = await tx.select().from(accounts).where(eq(accounts.customerId, accountId)).for('update');
       const [loan] = await tx.select().from(loans).where(eq(loans.id, loanId)).for('update');
 
@@ -1148,31 +1148,31 @@ getStatementData = async ({
       if (!loan) throw new AppError(404, 'Loan account not found');
       if (loan.status !== 'ACTIVE') throw new AppError(400, `Cannot process payment. Loan is ${loan.status}`);
 
-      // 2. Determine the exact payment amount
+      // Determines exact payment amount.
       const amountToPay = paymentType === 'EMI' 
         ? Number(loan.emiAmount) 
         : Number(loan.outstandingBalance);
 
       if (amountToPay <= 0) throw new AppError(400, 'No outstanding balance to pay');
 
-      // 3. Verify sufficient funds in the primary account
+      // Verifies sufficient funds in primary account.
       const currentBalance = Number(account.balance);
       if (currentBalance < amountToPay) {
         throw new AppError(400, `Insufficient funds. Need ₹${amountToPay.toFixed(2)}, but available balance is ₹${currentBalance.toFixed(2)}`);
       }
 
-      // 4. Calculate new balances
+      // Calculates updated balances.
       const newAccountBalance = (currentBalance - amountToPay).toFixed(2);
       const newLoanBalance = (Number(loan.outstandingBalance) - amountToPay).toFixed(2);
       const newLoanStatus = Number(newLoanBalance) <= 0.01 ? 'CLOSED' : 'ACTIVE'; // 0.01 to handle float rounding
 
-      // 5. Advance the next EMI date if it was a standard EMI payment
+      // Advances next EMI date for standard EMI payment.
       const nextEmiDate = new Date(loan.nextEmiDate || new Date());
       if (paymentType === 'EMI') {
         nextEmiDate.setMonth(nextEmiDate.getMonth() + 1);
       }
 
-      // 6. Execute updates
+      // Executes database updates.
       await tx.update(accounts)
         .set({ balance: newAccountBalance, availableBalance: newAccountBalance, updatedAt: new Date() })
         .where(eq(accounts.id, accountId));
