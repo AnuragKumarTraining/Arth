@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo, useCallback } from 'react';
 import { useParams } from 'react-router-dom';
 import { Navbar } from '../components/navbar';
 import { env } from '../config/env';
@@ -44,8 +44,33 @@ export default function AccountSettings() {
   const [otpCooldown, setOtpCooldown] = useState<number>(0);
   const [feedback, setFeedback] = useState<{ message: string; isError: boolean } | null>(null);
 
+  const handleSelectCustomer = useCallback((cust: CustomerRecord) => {
+    setSelectedCustomerId(cust.id);
+    setEmail(cust.email || '');
+    setFirstName(cust.firstName || '');
+    setLastName(cust.lastName || '');
+    setPhoneNumber(cust.phoneNumber || '');
+    setAddress(cust.address || '');
+    
+    if (cust.dateOfBirth) {
+      const d = new Date(cust.dateOfBirth);
+      if (!isNaN(d.getTime())) {
+        setDateOfBirth(d.toISOString().split('T')[0]);
+      } else {
+        setDateOfBirth(String(cust.dateOfBirth));
+      }
+    } else {
+      setDateOfBirth('');
+    }
+
+    setIsUnlocked(false);
+    setOtp('');
+    setOtpSent(false);
+    setFeedback(null);
+  }, []);
+
   // Fetch users
-  const fetchCustomers = async () => {
+  const fetchCustomers = useCallback(async () => {
     setIsLoading(true);
     setFeedback(null);
     try {
@@ -75,11 +100,11 @@ export default function AccountSettings() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [paramId, selectedCustomerId, handleSelectCustomer]);
 
   useEffect(() => {
     fetchCustomers();
-  }, []);
+  }, [fetchCustomers]);
 
   // Cooldown countdown timer
   useEffect(() => {
@@ -90,30 +115,6 @@ export default function AccountSettings() {
     return () => clearInterval(timer);
   }, [otpCooldown]);
 
-  const handleSelectCustomer = (cust: CustomerRecord) => {
-    setSelectedCustomerId(cust.id);
-    setEmail(cust.email || '');
-    setFirstName(cust.firstName || '');
-    setLastName(cust.lastName || '');
-    setPhoneNumber(cust.phoneNumber || '');
-    setAddress(cust.address || '');
-    
-    if (cust.dateOfBirth) {
-      const d = new Date(cust.dateOfBirth);
-      if (!isNaN(d.getTime())) {
-        setDateOfBirth(d.toISOString().split('T')[0]);
-      } else {
-        setDateOfBirth(String(cust.dateOfBirth));
-      }
-    } else {
-      setDateOfBirth('');
-    }
-
-    setIsUnlocked(false);
-    setOtp('');
-    setOtpSent(false);
-    setFeedback(null);
-  };
 
   const selectedCustomer = useMemo(() => {
     return customersList.find((c) => c.id === selectedCustomerId) || null;

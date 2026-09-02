@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 
 import type { CustomerAccount } from '../config/admin-input';
 import { env } from '../config/env';
@@ -29,7 +29,7 @@ export default function KYC() {
     return () => window.clearTimeout(timer);
   }, [searchQuery]);
 
-  const fetchUsers = async () => {
+  const fetchUsers = useCallback(async () => {
     try {
       setIsLoading(true);
       setFeedback(null);
@@ -68,11 +68,11 @@ export default function KYC() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [currentPage, debouncedSearchQuery, kycFilter]);
 
   useEffect(() => {
     fetchUsers();
-  }, [currentPage, debouncedSearchQuery, kycFilter]);
+  }, [fetchUsers]);
 
   useEffect(() => {
     setCurrentPage(1);

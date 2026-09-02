@@ -36,7 +36,18 @@ export default function Register() {
     setIsLoading(true);
 
     try {
-      const { confirmPassword, ...payload } = formData;
+      const payload = {
+        firstName: formData.firstName,
+        lastName: formData.lastName,
+        email: formData.email,
+        password: formData.password,
+        dateOfBirth: formData.dateOfBirth,
+        phoneNumber: formData.phoneNumber,
+        nationalId: formData.nationalId,
+        address: formData.address,
+        accountType: formData.accountType,
+        branchId: formData.branchId,
+      };
 
       const res = await fetch(`${API_BASE}/createAccount`, {
         method: 'POST',

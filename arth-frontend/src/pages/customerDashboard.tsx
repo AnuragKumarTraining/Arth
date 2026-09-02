@@ -113,7 +113,7 @@ const [paymentConfig, setPaymentConfig] = useState<LoanPaymentConfig>({
       const res = await fetch(`${API_BASE}/accounts/${id}/beneficiaries`, { credentials: 'include' });
       const data = await res.json();
       if (res.ok) setBeneficiaries(data.beneficiaries || []);
-    } catch (err) {
+    } catch {
       console.error('Failed to fetch beneficiaries');
     }
   };

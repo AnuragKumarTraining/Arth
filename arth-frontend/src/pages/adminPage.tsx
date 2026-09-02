@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Navbar } from '../components/navbar';
 import type { UserAccount } from '../config/user-account';
@@ -27,7 +27,7 @@ export default function StaffDashboard() {
     return () => window.clearTimeout(timer);
   }, [searchQuery]);
 
-  const fetchUsers = async () => {
+  const fetchUsers = useCallback(async () => {
     setIsLoading(true);
     setFeedback(null);
     try {
@@ -49,11 +49,11 @@ export default function StaffDashboard() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [currentPage, debouncedSearchQuery, base]);
 
   useEffect(() => {
     fetchUsers();
-  }, [currentPage, debouncedSearchQuery]);
+  }, [fetchUsers]);
 
   // --- NEW: Reset to page 1 on search ---
   useEffect(() => {

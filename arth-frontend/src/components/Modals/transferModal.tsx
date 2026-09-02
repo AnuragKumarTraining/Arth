@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { env } from '../../config/env'; // Adjust path if needed
 
 const API_BASE = env.adminBase;
@@ -38,16 +38,16 @@ export const TransferModal: React.FC<TransferModalProps> = ({
   const [message, setMessage] = useState({ text: '', isError: false });
 
   // Fetch beneficiaries when modal opens
-  const fetchBeneficiaries = async () => {
+  const fetchBeneficiaries = useCallback(async () => {
     if (!accountId) return;
     try {
       const res = await fetch(`${API_BASE}/accounts/${accountId}/beneficiaries`, { credentials: 'include' });
       const data = await res.json();
       if (res.ok) setBeneficiaries(data.beneficiaries || []);
-    } catch (err) {
+    } catch {
       console.error('Failed to fetch beneficiaries');
     }
-  };
+  }, [accountId]);
 
   useEffect(() => {
     if (isOpen) {
@@ -57,7 +57,7 @@ export const TransferModal: React.FC<TransferModalProps> = ({
       setMessage({ text: '', isError: false });
       fetchBeneficiaries();
     }
-  }, [isOpen, accountId]);
+  }, [isOpen, accountId, fetchBeneficiaries]);
 
   if (!isOpen) return null;
 
