@@ -3,15 +3,46 @@ set -e
 
 # Configuration
 PROJECT_ID="project-4f510d6e-25d6-40b9-968"
-# Region (us-central1 is GCP's lowest-cost Tier 1 region for Cloud Run, Cloud SQL & Always Free credits)
 REGION="us-central1"
 DB_INSTANCE="arth-db"
 DB_NAME="arth_db"
 DB_USER="arth_user"
-DB_PASSWORD="${DB_PASSWORD:-ArthSecurePassword2026!}"
-ADMIN_PASSWORD="${ADMIN_PASSWORD:-AdminPassword123!}"
-ADMIN_JWT_SECRET="${ADMIN_JWT_SECRET:-arth_super_jwt_secret_key_2026}"
 REPO_NAME="arth-repo"
+
+# Credentials setup - zero hardcoded passwords or emails in script
+if [ -z "$DB_PASSWORD" ]; then
+  read -sp "Enter DB Password (press Enter for auto-generated random password): " DB_PASSWORD || true
+  echo ""
+  if [ -z "$DB_PASSWORD" ]; then
+    DB_PASSWORD=$(openssl rand -hex 16 2>/dev/null || date +%s%N | head -c 20)
+  fi
+fi
+
+if [ -z "$ADMIN_PASSWORD" ]; then
+  read -sp "Enter Admin Password (press Enter for auto-generated random password): " ADMIN_PASSWORD || true
+  echo ""
+  if [ -z "$ADMIN_PASSWORD" ]; then
+    ADMIN_PASSWORD=$(openssl rand -hex 16 2>/dev/null || date +%s%N | head -c 20)
+  fi
+fi
+
+if [ -z "$ADMIN_JWT_SECRET" ]; then
+  ADMIN_JWT_SECRET=$(openssl rand -hex 32 2>/dev/null || date +%s%N | head -c 32)
+fi
+
+SMTP_HOST="${SMTP_HOST:-smtp.gmail.com}"
+SMTP_PORT="${SMTP_PORT:-587}"
+
+if [ -z "$SMTP_USER" ]; then
+  read -p "Enter SMTP Email User (press Enter to skip): " SMTP_USER || true
+  SMTP_USER="${SMTP_USER:-disabled@arth.local}"
+fi
+
+if [ -z "$SMTP_PASS" ]; then
+  read -sp "Enter SMTP Email Password (press Enter to skip): " SMTP_PASS || true
+  echo ""
+  SMTP_PASS="${SMTP_PASS:-disabled}"
+fi
 
 echo "=== 1. Setting GCP Project & Region ==="
 gcloud config set project "$PROJECT_ID"
@@ -104,7 +135,7 @@ gcloud run deploy arth-backend \
   --image "$BACKEND_IMAGE" \
   --add-cloudsql-instances "${PROJECT_ID}:${REGION}:${DB_INSTANCE}" \
   --update-secrets DATABASE_URL=DATABASE_URL:latest,ADMIN_JWT_SECRET=ADMIN_JWT_SECRET:latest \
-  --set-env-vars NODE_ENV=production,ADMIN_EMAIL=admin@arth.com,ADMIN_PASSWORD="${ADMIN_PASSWORD}",SMTP_HOST=smtp.gmail.com,SMTP_PORT=587,SMTP_USER=admin@arth.com,SMTP_PASS=mockpass \
+  --set-env-vars NODE_ENV=production,ADMIN_EMAIL="${ADMIN_EMAIL:-admin@arth.com}",ADMIN_PASSWORD="${ADMIN_PASSWORD}",SMTP_HOST="${SMTP_HOST}",SMTP_PORT="${SMTP_PORT}",SMTP_USER="${SMTP_USER}",SMTP_PASS="${SMTP_PASS}" \
   --allow-unauthenticated \
   --min-instances 0 \
   --max-instances 2
