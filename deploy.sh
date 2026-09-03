@@ -411,23 +411,6 @@ do
 
 done
 
-# ============================================================
-# 15. Remove old PORT env if it exists
-# ============================================================
-
-echo
-echo "==> Checking for old Cloud Run PORT configuration..."
-
-if gcloud run services describe "$BACKEND_SERVICE" \
-    --region="$REGION" \
-    --project="$PROJECT_ID" >/dev/null 2>&1; then
-
-    gcloud run services update "$BACKEND_SERVICE" \
-        --region="$REGION" \
-        --project="$PROJECT_ID" \
-        --remove-env-vars=PORT \
-        --quiet || true
-fi
 
 # ============================================================
 # 16. Build backend
