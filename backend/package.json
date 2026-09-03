@@ -32,6 +32,8 @@
     "pdf-lib": "^1.17.1",
     "pg": "^8.23.0",
     "pino": "^10.3.1",
+    "drizzle-kit": "^0.31.10",
+    "tsx": "^4.23.12",
     "zod": "^4.4.3"
   },
   "devDependencies": {
@@ -45,8 +47,6 @@
     "@types/pg": "^8.21.0",
     "@types/pino": "^7.0.4",
     "drizzle-dbml-generator": "^0.10.0",
-    "drizzle-kit": "^0.31.10",
-    "tsx": "^4.23.12",
     "typescript": "^7.0.2"
   }
 }

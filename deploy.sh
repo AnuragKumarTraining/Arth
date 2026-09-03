@@ -499,7 +499,7 @@ gcloud run jobs create arth-db-seed \
     --service-account="$RUNTIME_SA" \
     --set-cloudsql-instances="${PROJECT_ID}:${REGION}:${DB_INSTANCE}" \
     --set-secrets="DATABASE_URL=DATABASE_URL:latest,ADMIN_JWT_SECRET=ADMIN_JWT_SECRET:latest" \
-    --set-env-vars="NODE_ENV=production,ADMIN_EMAIL=${ADMIN_EMAIL},ADMIN_PASSWORD=${ADMIN_PASSWORD}" \
+    --set-env-vars="NODE_ENV=production,ADMIN_EMAIL=${ADMIN_EMAIL:-admin@arth.com},ADMIN_PASSWORD=${ADMIN_PASSWORD:-AdminPassword123!}" \
     --command="npx" \
     --args="tsx,src/seed_db.ts" \
     --project="$PROJECT_ID" \
