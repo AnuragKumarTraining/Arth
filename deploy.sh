@@ -134,6 +134,7 @@ fi
 gcloud run deploy arth-backend \
   --image "$BACKEND_IMAGE" \
   --add-cloudsql-instances "${PROJECT_ID}:${REGION}:${DB_INSTANCE}" \
+  --remove-env-vars PORT \
   --update-secrets DATABASE_URL=DATABASE_URL:latest,ADMIN_JWT_SECRET=ADMIN_JWT_SECRET:latest \
   --set-env-vars NODE_ENV=production,ADMIN_EMAIL="${ADMIN_EMAIL:-admin@arth.com}",ADMIN_PASSWORD="${ADMIN_PASSWORD}",SMTP_HOST="${SMTP_HOST}",SMTP_PORT="${SMTP_PORT}",SMTP_USER="${SMTP_USER}",SMTP_PASS="${SMTP_PASS}" \
   --allow-unauthenticated \
