@@ -2,9 +2,10 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 import { randomInt, randomUUID } from 'node:crypto';
+import bcrypt from 'bcrypt';
 import { sql } from 'drizzle-orm';
 import { db } from './db';
-import { customers, accounts, branches } from './db/schema';
+import { customers, accounts, branches, admins } from './db/schema';
 import { transactions } from './db/schema/transaction';
 
 const SEED_BRANCH_CODE = 'ARTH001';
@@ -429,6 +430,32 @@ async function updateAccountBalances(
   }
 }
 
+// Admin seeding logic.
+
+async function seedAdminUser(): Promise<void> {
+  const email = (process.env.ADMIN_EMAIL || 'admin@arth.com').toLowerCase().trim();
+  const rawPassword = process.env.ADMIN_PASSWORD || 'AdminPassword123!';
+
+  console.log(`Seeding Admin user (${email})...`);
+
+  const existing = await db
+    .select({ id: admins.id })
+    .from(admins)
+    .where(sql`${admins.email} = ${email}`)
+    .limit(1);
+
+  if (existing.length === 0) {
+    const hashedPassword = await bcrypt.hash(rawPassword, 10);
+    await db.insert(admins).values({
+      email,
+      password: hashedPassword,
+    });
+    console.log(`Admin user [${email}] created successfully.`);
+  } else {
+    console.log(`Admin user [${email}] already exists.`);
+  }
+}
+
 // Executes database seeding process.
 
 async function main(): Promise<void> {
@@ -442,6 +469,9 @@ async function main(): Promise<void> {
 
   // Validates seed branch existence.
   await validateBranch();
+
+  // Seeds admin user for staff authentication.
+  await seedAdminUser();
 
   // Seeds customers and returns primary keys.
   const customerIds = await seedCustomers();
