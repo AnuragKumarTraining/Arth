@@ -10,12 +10,7 @@ import { transactions } from './db/schema/transaction';
 
 const SEED_BRANCH_CODE = 'ARTH001';
 
-const SEED_PASSWORD_HASH = process.env.SEED_PASSWORD_HASH;
-
-if (!SEED_PASSWORD_HASH) {
-  throw new Error('SEED_PASSWORD_HASH environment variable is required.');
-}
-
+const SEED_PASSWORD_HASH = process.env.SEED_PASSWORD_HASH || bcrypt.hashSync('Password123!', 10);
 const passwordHash: string = SEED_PASSWORD_HASH;
 
 const CONFIG = {
@@ -107,12 +102,16 @@ async function validateBranch(): Promise<void> {
     .limit(1);
 
   if (result.length === 0) {
-    throw new Error(
-      `Branch ${SEED_BRANCH_CODE} does not exist. Seed the branch first.`
-    );
+    console.log(`Creating initial branch: ${SEED_BRANCH_CODE}...`);
+    await db.insert(branches).values({
+      branchCode: SEED_BRANCH_CODE,
+      branchName: 'Headquarters Branch',
+      ifscCode: 'ARTH0000001',
+      address: 'Main Banking House, Financial District, India',
+    });
+  } else {
+    console.log(`Using existing branch: ${SEED_BRANCH_CODE}`);
   }
-
-  console.log(`Using existing branch: ${SEED_BRANCH_CODE}`);
 }
 
 // Customer seeding logic.
