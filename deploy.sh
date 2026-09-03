@@ -39,6 +39,13 @@ gcloud projects add-iam-policy-binding "$PROJECT_ID" \
   --member="serviceAccount:${COMPUTE_SA}" \
   --role="roles/cloudsql.client" --quiet >/dev/null 2>&1 || true
 
+# Grant bucket-level storage admin if bucket exists
+gcloud storage buckets add-iam-policy-binding "gs://${PROJECT_ID}_cloudbuild" \
+  --member="serviceAccount:${COMPUTE_SA}" \
+  --role="roles/storage.admin" --quiet >/dev/null 2>&1 || true
+
+# Configure Docker auth for Artifact Registry
+gcloud auth configure-docker "${REGION}-docker.pkg.dev" --quiet
 
 echo "=== 3. Creating Artifact Registry Repository ==="
 if ! gcloud artifacts repositories describe "$REPO_NAME" --location="$REGION" >/dev/null 2>&1; then
@@ -80,10 +87,19 @@ if ! gcloud secrets describe ADMIN_JWT_SECRET >/dev/null 2>&1; then
 fi
 
 echo "=== 7. Building & Deploying Backend Cloud Run Service ==="
-gcloud builds submit --tag "${REGION}-docker.pkg.dev/${PROJECT_ID}/${REPO_NAME}/arth-backend:latest" ./backend
+BACKEND_IMAGE="${REGION}-docker.pkg.dev/${PROJECT_ID}/${REPO_NAME}/arth-backend:latest"
+
+if command -v docker >/dev/null 2>&1; then
+  echo "Building backend using Docker in Cloud Shell..."
+  docker build -t "$BACKEND_IMAGE" ./backend
+  docker push "$BACKEND_IMAGE"
+else
+  echo "Building backend using Cloud Build..."
+  gcloud builds submit --tag "$BACKEND_IMAGE" ./backend
+fi
 
 gcloud run deploy arth-backend \
-  --image "${REGION}-docker.pkg.dev/${PROJECT_ID}/${REPO_NAME}/arth-backend:latest" \
+  --image "$BACKEND_IMAGE" \
   --add-cloudsql-instances "${PROJECT_ID}:${REGION}:${DB_INSTANCE}" \
   --update-secrets DATABASE_URL=DATABASE_URL:latest,ADMIN_JWT_SECRET=ADMIN_JWT_SECRET:latest \
   --set-env-vars NODE_ENV=production,PORT=8080,ADMIN_EMAIL=admin@arth.com,ADMIN_PASSWORD=AdminPassword123!,SMTP_HOST=smtp.gmail.com,SMTP_PORT=587,SMTP_USER=admin@arth.com,SMTP_PASS=mockpass \
@@ -95,13 +111,22 @@ BACKEND_URL=$(gcloud run services describe arth-backend --format='value(status.u
 echo "Backend Cloud Run URL: $BACKEND_URL"
 
 echo "=== 8. Building & Deploying Frontend Cloud Run Service ==="
-gcloud builds submit \
-  --tag "${REGION}-docker.pkg.dev/${PROJECT_ID}/${REPO_NAME}/arth-frontend:latest" \
-  --build-arg "VITE_API_BASE=${BACKEND_URL}/api" \
-  ./arth-frontend
+FRONTEND_IMAGE="${REGION}-docker.pkg.dev/${PROJECT_ID}/${REPO_NAME}/arth-frontend:latest"
+
+if command -v docker >/dev/null 2>&1; then
+  echo "Building frontend using Docker in Cloud Shell..."
+  docker build --build-arg "VITE_API_BASE=${BACKEND_URL}/api" -t "$FRONTEND_IMAGE" ./arth-frontend
+  docker push "$FRONTEND_IMAGE"
+else
+  echo "Building frontend using Cloud Build..."
+  gcloud builds submit \
+    --tag "$FRONTEND_IMAGE" \
+    --build-arg "VITE_API_BASE=${BACKEND_URL}/api" \
+    ./arth-frontend
+fi
 
 gcloud run deploy arth-frontend \
-  --image "${REGION}-docker.pkg.dev/${PROJECT_ID}/${REPO_NAME}/arth-frontend:latest" \
+  --image "$FRONTEND_IMAGE" \
   --allow-unauthenticated \
   --min-instances 0 \
   --max-instances 2
