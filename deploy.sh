@@ -475,7 +475,7 @@ gcloud run jobs create arth-db-migrate \
     --image="$BACKEND_IMAGE" \
     --region="$REGION" \
     --service-account="$RUNTIME_SA" \
-    --add-cloudsql-instances="${PROJECT_ID}:${REGION}:${DB_INSTANCE}" \
+    --set-cloudsql-instances="${PROJECT_ID}:${REGION}:${DB_INSTANCE}" \
     --set-secrets="DATABASE_URL=DATABASE_URL:latest,ADMIN_JWT_SECRET=ADMIN_JWT_SECRET:latest" \
     --set-env-vars="NODE_ENV=production" \
     --command="npx" \
@@ -497,7 +497,7 @@ gcloud run jobs create arth-db-seed \
     --image="$BACKEND_IMAGE" \
     --region="$REGION" \
     --service-account="$RUNTIME_SA" \
-    --add-cloudsql-instances="${PROJECT_ID}:${REGION}:${DB_INSTANCE}" \
+    --set-cloudsql-instances="${PROJECT_ID}:${REGION}:${DB_INSTANCE}" \
     --set-secrets="DATABASE_URL=DATABASE_URL:latest,ADMIN_JWT_SECRET=ADMIN_JWT_SECRET:latest" \
     --set-env-vars="NODE_ENV=production,ADMIN_EMAIL=${ADMIN_EMAIL},ADMIN_PASSWORD=${ADMIN_PASSWORD}" \
     --command="npx" \
