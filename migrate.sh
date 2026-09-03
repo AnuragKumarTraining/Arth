@@ -34,7 +34,7 @@ gcloud run jobs create "$JOB_NAME" \
     --region="$REGION" \
     --service-account="$RUNTIME_SA" \
     --set-cloudsql-instances="${PROJECT_ID}:${REGION}:${DB_INSTANCE}" \
-    --set-secrets="DATABASE_URL=DATABASE_URL:latest" \
+    --set-secrets="DATABASE_URL=DATABASE_URL:latest,ADMIN_JWT_SECRET=ADMIN_JWT_SECRET:latest" \
     --set-env-vars="NODE_ENV=production" \
     --command="npx" \
     --args="drizzle-kit,migrate" \
@@ -46,7 +46,7 @@ gcloud run jobs update "$JOB_NAME" \
     --region="$REGION" \
     --service-account="$RUNTIME_SA" \
     --set-cloudsql-instances="${PROJECT_ID}:${REGION}:${DB_INSTANCE}" \
-    --set-secrets="DATABASE_URL=DATABASE_URL:latest" \
+    --set-secrets="DATABASE_URL=DATABASE_URL:latest,ADMIN_JWT_SECRET=ADMIN_JWT_SECRET:latest" \
     --set-env-vars="NODE_ENV=production" \
     --command="npx" \
     --args="drizzle-kit,migrate" \
