@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Navbar } from '../components/navbar';
-import type { UserAccount } from '../config/user-account';
+import type { UserAccount } from '../config/types/user-account';
 import { env } from '../config/env';
 
 export default function StaffDashboard() {
@@ -80,7 +80,7 @@ export default function StaffDashboard() {
         method: 'POST',
         credentials: 'include',
       });
-    } catch {} 
+    } catch { }
     finally {
       navigate('/admin/login');
     }
@@ -90,14 +90,14 @@ export default function StaffDashboard() {
     <div className="min-h-screen bg-slate-50">
       <Navbar />
       <main className="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
-        
+
         {/* Header Actions */}
         <div className="flex flex-col md:flex-row justify-between md:items-center mb-6 gap-4">
           <div>
             <h1 className="text-2xl font-bold text-slate-900">Branch Account Directory</h1>
             <p className="text-sm text-slate-600">Access customer profiles, verify KYC status, and perform core banking operations.</p>
           </div>
-          
+
           <div className="flex items-center gap-3">
             <button
               onClick={fetchUsers}
@@ -129,9 +129,8 @@ export default function StaffDashboard() {
 
         {feedback && (
           <div
-            className={`p-3 mb-4 rounded-md text-sm border ${
-              feedback.isError ? 'bg-red-50 text-red-700 border-red-200' : 'bg-green-50 text-green-700 border-green-200'
-            }`}
+            className={`p-3 mb-4 rounded-md text-sm border ${feedback.isError ? 'bg-red-50 text-red-700 border-red-200' : 'bg-green-50 text-green-700 border-green-200'
+              }`}
           >
             {feedback.message}
           </div>
@@ -186,11 +185,10 @@ export default function StaffDashboard() {
                     </td>
                     <td className="px-4 py-4 text-sm">
                       <span
-                        className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border ${
-                          user.isActive 
-                          ? 'bg-emerald-50 text-emerald-700 border-emerald-200' 
+                        className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border ${user.isActive
+                          ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
                           : 'bg-rose-50 text-rose-700 border-rose-200'
-                        }`}
+                          }`}
                       >
                         {user.isActive ? 'Active' : 'Frozen'}
                       </span>
@@ -208,7 +206,7 @@ export default function StaffDashboard() {
               )}
             </tbody>
           </table>
-          
+
           {/* --- NEW: Pagination Controls --- */}
           {!isLoading && totalUsers > 0 && (
             <div className="flex items-center justify-between px-4 py-3 border-t border-slate-200 bg-white sm:px-6">

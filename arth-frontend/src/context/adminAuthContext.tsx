@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useState } from 'react';
-import type { AdminUser, AuthContextType } from '../config/admin-context';
+import type { AdminUser, AuthContextType } from '../config/types/admin-context';
 import { env } from '../config/env';
 
 

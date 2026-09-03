@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 
-import type { CustomerAccount } from '../config/admin-input';
+import type { CustomerAccount } from '../config/types/admin-input';
 import { env } from '../config/env';
 import { Navbar } from '../components/navbar';
 
@@ -105,8 +105,8 @@ export default function KYC() {
       if (!res.ok) {
         throw new Error(
           data.message ||
-            data.error ||
-            'Failed to update user status',
+          data.error ||
+          'Failed to update user status',
         );
       }
 
@@ -114,10 +114,10 @@ export default function KYC() {
         prev.map((item) =>
           item.id === userId
             ? {
-                ...item,
-                kycStatus,
-                isActive,
-              }
+              ...item,
+              kycStatus,
+              isActive,
+            }
             : item,
         ),
       );
@@ -188,11 +188,10 @@ export default function KYC() {
 
         {feedback && (
           <div
-            className={`p-3 mb-4 rounded-md text-sm border ${
-              feedback.isError
-                ? 'bg-red-50 text-red-700 border-red-200'
-                : 'bg-green-50 text-green-700 border-green-200'
-            }`}
+            className={`p-3 mb-4 rounded-md text-sm border ${feedback.isError
+              ? 'bg-red-50 text-red-700 border-red-200'
+              : 'bg-green-50 text-green-700 border-green-200'
+              }`}
           >
             {feedback.message}
           </div>
@@ -314,9 +313,9 @@ export default function KYC() {
                           handleStatusUpdate(
                             user.id,
                             event.target.value as
-                              | 'pending'
-                              | 'verified'
-                              | 'rejected',
+                            | 'pending'
+                            | 'verified'
+                            | 'rejected',
                             user.isActive,
                           )
                         }
@@ -338,11 +337,10 @@ export default function KYC() {
 
                     <td className="px-4 py-4 text-sm">
                       <span
-                        className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
-                          user.isActive
-                            ? 'bg-green-100 text-green-800'
-                            : 'bg-yellow-100 text-yellow-800'
-                        }`}
+                        className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${user.isActive
+                          ? 'bg-green-100 text-green-800'
+                          : 'bg-yellow-100 text-yellow-800'
+                          }`}
                       >
                         {user.isActive
                           ? 'Active'
@@ -363,11 +361,10 @@ export default function KYC() {
                             !user.isActive,
                           )
                         }
-                        className={`px-3 py-1 text-xs font-medium rounded border ${
-                          user.isActive
-                            ? 'border-red-300 text-red-700 hover:bg-red-50'
-                            : 'border-green-300 text-green-700 hover:bg-green-50'
-                        } disabled:opacity-50`}
+                        className={`px-3 py-1 text-xs font-medium rounded border ${user.isActive
+                          ? 'border-red-300 text-red-700 hover:bg-red-50'
+                          : 'border-green-300 text-green-700 hover:bg-green-50'
+                          } disabled:opacity-50`}
                       >
                         {updatingId === user.id
                           ? 'Updating...'
