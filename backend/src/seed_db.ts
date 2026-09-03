@@ -497,6 +497,7 @@ async function main(): Promise<void> {
   console.log(`Transactions: ${CONFIG.transactionCount.toLocaleString()}`);
   console.log(`Time:         ${elapsedSeconds.toFixed(2)} seconds`);
   console.log('==========================================');
+  process.exit(0);
 }
 
 main().catch((error) => {
