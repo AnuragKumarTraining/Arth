@@ -8,7 +8,9 @@ REGION="us-central1"
 DB_INSTANCE="arth-db"
 DB_NAME="arth_db"
 DB_USER="arth_user"
-DB_PASSWORD="ArthSecurePassword2026!"
+DB_PASSWORD="${DB_PASSWORD:-ArthSecurePassword2026!}"
+ADMIN_PASSWORD="${ADMIN_PASSWORD:-AdminPassword123!}"
+ADMIN_JWT_SECRET="${ADMIN_JWT_SECRET:-arth_super_jwt_secret_key_2026}"
 REPO_NAME="arth-repo"
 
 echo "=== 1. Setting GCP Project & Region ==="
@@ -83,7 +85,7 @@ else
 fi
 
 if ! gcloud secrets describe ADMIN_JWT_SECRET >/dev/null 2>&1; then
-  echo -n "arth_super_jwt_secret_key_2026" | gcloud secrets create ADMIN_JWT_SECRET --data-file=-
+  echo -n "$ADMIN_JWT_SECRET" | gcloud secrets create ADMIN_JWT_SECRET --data-file=-
 fi
 
 echo "=== 7. Building & Deploying Backend Cloud Run Service ==="
@@ -102,7 +104,7 @@ gcloud run deploy arth-backend \
   --image "$BACKEND_IMAGE" \
   --add-cloudsql-instances "${PROJECT_ID}:${REGION}:${DB_INSTANCE}" \
   --update-secrets DATABASE_URL=DATABASE_URL:latest,ADMIN_JWT_SECRET=ADMIN_JWT_SECRET:latest \
-  --set-env-vars NODE_ENV=production,ADMIN_EMAIL=admin@arth.com,ADMIN_PASSWORD=AdminPassword123!,SMTP_HOST=smtp.gmail.com,SMTP_PORT=587,SMTP_USER=admin@arth.com,SMTP_PASS=mockpass \
+  --set-env-vars NODE_ENV=production,ADMIN_EMAIL=admin@arth.com,ADMIN_PASSWORD="${ADMIN_PASSWORD}",SMTP_HOST=smtp.gmail.com,SMTP_PORT=587,SMTP_USER=admin@arth.com,SMTP_PASS=mockpass \
   --allow-unauthenticated \
   --min-instances 0 \
   --max-instances 2
