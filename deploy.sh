@@ -460,60 +460,6 @@ echo
 echo
 echo "Backend URL:"
 echo "$BACKEND_URL"
-
-# ============================================================
-# 18.1 Run Database Migrations & Seeding via Cloud Run Jobs
-# ============================================================
-
-echo
-echo "============================================================"
-echo " Running Database Migrations & Seeding"
-echo "============================================================"
-
-# Create / update migration job
-gcloud run jobs create arth-db-migrate \
-    --image="$BACKEND_IMAGE" \
-    --region="$REGION" \
-    --service-account="$RUNTIME_SA" \
-    --set-cloudsql-instances="${PROJECT_ID}:${REGION}:${DB_INSTANCE}" \
-    --set-secrets="DATABASE_URL=DATABASE_URL:latest,ADMIN_JWT_SECRET=ADMIN_JWT_SECRET:latest" \
-    --set-env-vars="NODE_ENV=production" \
-    --command="npx" \
-    --args="drizzle-kit,migrate" \
-    --project="$PROJECT_ID" \
-    --quiet || gcloud run jobs update arth-db-migrate \
-    --image="$BACKEND_IMAGE" \
-    --region="$REGION" \
-    --project="$PROJECT_ID" \
-    --quiet
-
-gcloud run jobs execute arth-db-migrate \
-    --region="$REGION" \
-    --project="$PROJECT_ID" \
-    --wait || true
-
-# Create / update seed job
-gcloud run jobs create arth-db-seed \
-    --image="$BACKEND_IMAGE" \
-    --region="$REGION" \
-    --service-account="$RUNTIME_SA" \
-    --set-cloudsql-instances="${PROJECT_ID}:${REGION}:${DB_INSTANCE}" \
-    --set-secrets="DATABASE_URL=DATABASE_URL:latest,ADMIN_JWT_SECRET=ADMIN_JWT_SECRET:latest" \
-    --set-env-vars="NODE_ENV=production,ADMIN_EMAIL=${ADMIN_EMAIL:-admin@arth.com},ADMIN_PASSWORD=${ADMIN_PASSWORD:-AdminPassword123!}" \
-    --command="npx" \
-    --args="tsx,src/seed_db.ts" \
-    --project="$PROJECT_ID" \
-    --quiet || gcloud run jobs update arth-db-seed \
-    --image="$BACKEND_IMAGE" \
-    --region="$REGION" \
-    --project="$PROJECT_ID" \
-    --quiet
-
-gcloud run jobs execute arth-db-seed \
-    --region="$REGION" \
-    --project="$PROJECT_ID" \
-    --wait || true
-
 # ============================================================
 # 19. Build frontend
 #
