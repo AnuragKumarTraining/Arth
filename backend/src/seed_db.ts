@@ -18,14 +18,14 @@ if (!SEED_PASSWORD_HASH) {
 const passwordHash: string = SEED_PASSWORD_HASH;
 
 const CONFIG = {
-  customerCount: 500_000,
-  accountCount: 750_000,
-  transactionCount: 1_000_000,
+  customerCount: 5,
+  accountCount: 7,
+  transactionCount: 10,
 
-  customerBatchSize: 2_000,
-  accountBatchSize: 2_000,
-  transactionBatchSize: 2_000,
-  balanceUpdateBatchSize: 2_000,
+  customerBatchSize: 2,
+  accountBatchSize: 2,
+  transactionBatchSize: 2,
+  balanceUpdateBatchSize: 2,
 };
 
 const FIRST_NAMES = [
