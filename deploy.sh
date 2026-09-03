@@ -25,23 +25,23 @@ gcloud services enable \
 
 PROJECT_NUMBER=$(gcloud projects describe "$PROJECT_ID" --format='value(projectNumber)')
 COMPUTE_SA="${PROJECT_NUMBER}-compute@developer.gserviceaccount.com"
+CLOUDBUILD_SA="${PROJECT_NUMBER}@cloudbuild.gserviceaccount.com"
 
-# Grant Storage Admin, Cloud SQL Client, and Secret Manager Accessor roles
-gcloud projects add-iam-policy-binding "$PROJECT_ID" \
-  --member="serviceAccount:${COMPUTE_SA}" \
-  --role="roles/storage.admin" --quiet >/dev/null 2>&1 || true
-
-gcloud projects add-iam-policy-binding "$PROJECT_ID" \
-  --member="serviceAccount:${COMPUTE_SA}" \
-  --role="roles/secretmanager.secretAccessor" --quiet >/dev/null 2>&1 || true
-
-gcloud projects add-iam-policy-binding "$PROJECT_ID" \
-  --member="serviceAccount:${COMPUTE_SA}" \
-  --role="roles/cloudsql.client" --quiet >/dev/null 2>&1 || true
+# Grant Artifact Registry Writer, Logs Writer, Storage Admin, Cloud SQL Client, and Secret Manager Accessor roles
+for SA in "$COMPUTE_SA" "$CLOUDBUILD_SA"; do
+  for ROLE in "roles/artifactregistry.writer" "roles/artifactregistry.admin" "roles/logging.logWriter" "roles/storage.admin" "roles/secretmanager.secretAccessor" "roles/cloudsql.client"; do
+    gcloud projects add-iam-policy-binding "$PROJECT_ID" \
+      --member="serviceAccount:${SA}" \
+      --role="$ROLE" --quiet >/dev/null 2>&1 || true
+  done
+done
 
 # Grant bucket-level storage admin if bucket exists
 gcloud storage buckets add-iam-policy-binding "gs://${PROJECT_ID}_cloudbuild" \
   --member="serviceAccount:${COMPUTE_SA}" \
+  --role="roles/storage.admin" --quiet >/dev/null 2>&1 || true
+gcloud storage buckets add-iam-policy-binding "gs://${PROJECT_ID}_cloudbuild" \
+  --member="serviceAccount:${CLOUDBUILD_SA}" \
   --role="roles/storage.admin" --quiet >/dev/null 2>&1 || true
 
 # Configure Docker auth for Artifact Registry
