@@ -441,8 +441,7 @@ gcloud run deploy "$BACKEND_SERVICE" \
     --allow-unauthenticated \
     --service-account="$RUNTIME_SA" \
     --add-cloudsql-instances="${PROJECT_ID}:${REGION}:${DB_INSTANCE}" \
-    --clear-env-vars \
-    --set-env-vars="NODE_ENV=production,ADMIN_EMAIL=${ADMIN_EMAIL},SMTP_HOST=${SMTP_HOST},SMTP_PORT=${SMTP_PORT},CORS_ORIGIN=http://localhost:5173" \
+    --update-env-vars="NODE_ENV=production,ADMIN_EMAIL=${ADMIN_EMAIL},SMTP_HOST=${SMTP_HOST},SMTP_PORT=${SMTP_PORT},CORS_ORIGIN=http://localhost:5173" \
     --set-secrets="DATABASE_URL=DATABASE_URL:latest,ADMIN_JWT_SECRET=ADMIN_JWT_SECRET:latest,ADMIN_PASSWORD=ADMIN_PASSWORD:latest,SMTP_USER=SMTP_USER:latest,SMTP_PASS=SMTP_PASS:latest" \
     --project="$PROJECT_ID"
 
