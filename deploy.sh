@@ -102,7 +102,7 @@ gcloud run deploy arth-backend \
   --image "$BACKEND_IMAGE" \
   --add-cloudsql-instances "${PROJECT_ID}:${REGION}:${DB_INSTANCE}" \
   --update-secrets DATABASE_URL=DATABASE_URL:latest,ADMIN_JWT_SECRET=ADMIN_JWT_SECRET:latest \
-  --set-env-vars NODE_ENV=production,PORT=8080,ADMIN_EMAIL=admin@arth.com,ADMIN_PASSWORD=AdminPassword123!,SMTP_HOST=smtp.gmail.com,SMTP_PORT=587,SMTP_USER=admin@arth.com,SMTP_PASS=mockpass \
+  --set-env-vars NODE_ENV=production,ADMIN_EMAIL=admin@arth.com,ADMIN_PASSWORD=AdminPassword123!,SMTP_HOST=smtp.gmail.com,SMTP_PORT=587,SMTP_USER=admin@arth.com,SMTP_PASS=mockpass \
   --allow-unauthenticated \
   --min-instances 0 \
   --max-instances 2
