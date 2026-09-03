@@ -15,13 +15,30 @@ echo "=== 1. Setting GCP Project & Region ==="
 gcloud config set project "$PROJECT_ID"
 gcloud config set run/region "$REGION"
 
-echo "=== 2. Enabling GCP Services ==="
+echo "=== 2. Enabling GCP Services & Assigning IAM Roles ==="
 gcloud services enable \
   run.googleapis.com \
   sqladmin.googleapis.com \
   secretmanager.googleapis.com \
   artifactregistry.googleapis.com \
   cloudbuild.googleapis.com
+
+PROJECT_NUMBER=$(gcloud projects describe "$PROJECT_ID" --format='value(projectNumber)')
+COMPUTE_SA="${PROJECT_NUMBER}-compute@developer.gserviceaccount.com"
+
+# Grant Storage Admin, Cloud SQL Client, and Secret Manager Accessor roles
+gcloud projects add-iam-policy-binding "$PROJECT_ID" \
+  --member="serviceAccount:${COMPUTE_SA}" \
+  --role="roles/storage.admin" --quiet >/dev/null 2>&1 || true
+
+gcloud projects add-iam-policy-binding "$PROJECT_ID" \
+  --member="serviceAccount:${COMPUTE_SA}" \
+  --role="roles/secretmanager.secretAccessor" --quiet >/dev/null 2>&1 || true
+
+gcloud projects add-iam-policy-binding "$PROJECT_ID" \
+  --member="serviceAccount:${COMPUTE_SA}" \
+  --role="roles/cloudsql.client" --quiet >/dev/null 2>&1 || true
+
 
 echo "=== 3. Creating Artifact Registry Repository ==="
 if ! gcloud artifacts repositories describe "$REPO_NAME" --location="$REGION" >/dev/null 2>&1; then
@@ -91,7 +108,7 @@ gcloud run deploy arth-frontend \
 
 FRONTEND_URL=$(gcloud run services describe arth-frontend --format='value(status.url)')
 
-echo "=== 9. Setting CORS_ORIGIN on Backend ==="
+echo "=== 9. Updating CORS_ORIGIN on Backend ==="
 gcloud run services update arth-backend \
   --update-env-vars CORS_ORIGIN="$FRONTEND_URL"
 
