@@ -3,7 +3,7 @@ dotenv.config();
 
 import { randomInt, randomUUID } from 'node:crypto';
 import bcrypt from 'bcrypt';
-import { sql } from 'drizzle-orm';
+import { eq, sql } from 'drizzle-orm';
 import { db } from './db';
 import { customers, accounts, branches, admins } from './db/schema';
 import { transactions } from './db/schema/transaction';
@@ -98,7 +98,7 @@ async function validateBranch(): Promise<void> {
   const result = await db
     .select({ branchCode: branches.branchCode })
     .from(branches)
-    .where(sql`${branches.branchCode} = ${SEED_BRANCH_CODE}`)
+    .where(eq(branches.branchCode, SEED_BRANCH_CODE))
     .limit(1);
 
   if (result.length === 0) {
@@ -440,7 +440,7 @@ async function seedAdminUser(): Promise<void> {
   const existing = await db
     .select({ id: admins.id })
     .from(admins)
-    .where(sql`${admins.email} = ${email}`)
+    .where(eq(admins.email, email))
     .limit(1);
 
   if (existing.length === 0) {
