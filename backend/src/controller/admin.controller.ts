@@ -39,7 +39,7 @@ class AdminController {
       res.cookie(env.adminCookieName, token, {
         httpOnly: true,
         secure: env.isProduction,
-        sameSite: 'lax',
+        sameSite: env.isProduction ? 'none' : 'lax',
         maxAge: env.expire_cookie,
         path: '/',
       });
@@ -48,6 +48,7 @@ class AdminController {
         success: true,
         message: 'Admin authentication successful',
         admin,
+        token,
       });
     } catch (error) {
       next(error);
@@ -71,14 +72,14 @@ class AdminController {
       res.cookie(env.adminCookieName, '', {
         httpOnly: true,
         secure: env.isProduction,
-        sameSite: 'lax',
+        sameSite: env.isProduction ? 'none' : 'lax',
         expires: new Date(0),
         path: '/',
       });
       res.clearCookie(env.adminCookieName, {
         httpOnly: true,
         secure: env.isProduction,
-        sameSite: 'lax',
+        sameSite: env.isProduction ? 'none' : 'lax',
         path: '/',
       });
 

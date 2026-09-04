@@ -14,7 +14,9 @@ declare global {
 
 export const requireCustomerAuth = (req: Request, _res: Response, next: NextFunction): void => {
   try {
-    const token = req.cookies?.[env.adminCookieName];
+    const authHeader = req.headers.authorization;
+    const bearerToken = authHeader && authHeader.startsWith('Bearer ') ? authHeader.substring(7) : null;
+    const token = req.cookies?.[env.adminCookieName] || bearerToken;
 
     if (!token) {
       throw new AppError(401, 'Authentication required. No active customer session.');

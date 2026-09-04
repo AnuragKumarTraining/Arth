@@ -12,7 +12,7 @@ export class CustomerAuthController {
       res.cookie(env.adminCookieName, token, {
         httpOnly: true,
         secure: env.isProduction,
-        sameSite: 'lax',
+        sameSite: env.isProduction ? 'none' : 'lax',
         maxAge: env.expire_cookie,
         path: '/',
       });
@@ -21,6 +21,7 @@ export class CustomerAuthController {
         success: true,
         message: 'Customer login successful',
         customer,
+        token,
       });
     } catch (error) {
       next(error);
@@ -32,14 +33,14 @@ export class CustomerAuthController {
       res.cookie(env.adminCookieName, '', {
         httpOnly: true,
         secure: env.isProduction,
-        sameSite: 'lax',
+        sameSite: env.isProduction ? 'none' : 'lax',
         expires: new Date(0),
         path: '/',
       });
       res.clearCookie(env.adminCookieName,{
         httpOnly: true,
         secure: env.isProduction,
-        sameSite: 'lax',
+        sameSite: env.isProduction ? 'none' : 'lax',
         path: '/'
       })
       res.status(200).json({
