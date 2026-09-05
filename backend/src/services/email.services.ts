@@ -3,19 +3,43 @@ import { env } from "../config/env";
 import { AccountDetailsEmailPayload } from "../types/accountDetailsEmailPayload";
 import { TransactionEmailPayload } from "../types/transactionsEmailPayload";
 class EmailService {
-  private transporter = nodemailer.createTransport({
-    host: env.host!,
-    port: Number(env.smtp_port!),
-    secure: false,
-    auth: {
-      user: env.smtp_user,
-      pass: env.smtp_pass
+  private getTransporter() {
+    if (!env.host || !env.smtp_user || !env.smtp_pass) {
+      return null;
     }
-  })
+    try {
+      return nodemailer.createTransport({
+        host: env.host,
+        port: Number(env.smtp_port || 587),
+        secure: false,
+        auth: {
+          user: env.smtp_user,
+          pass: env.smtp_pass,
+        },
+      });
+    } catch (err) {
+      console.error('[EmailService] Failed to create transporter:', err);
+      return null;
+    }
+  }
+
+  private async sendMailSafe(mailOptions: nodemailer.SendMailOptions): Promise<void> {
+    try {
+      const transporter = this.getTransporter();
+      if (!transporter) {
+        console.warn('[EmailService] SMTP credentials not configured (SMTP_HOST, SMTP_USER, SMTP_PASS). Skipping email dispatch.');
+        return;
+      }
+      await transporter.sendMail(mailOptions);
+      console.log('[EmailService] Email dispatched successfully to:', mailOptions.to);
+    } catch (error) {
+      console.error('[EmailService] Email dispatch encountered an error, skipping safely:', error);
+    }
+  }
 
   async sendOtpEmail(to: string, otp: string) {
     const mailOptions = {
-      from: `"Arth" <${env.smtp_user}>`,
+      from: `"Arth" <${env.smtp_user || 'noreply@arth.com'}>`,
       to,
       subject: "OTP for Email Verification",
 
@@ -29,9 +53,9 @@ class EmailService {
           <p style="font-size: 13px; color: #718096;">This code is valid for <strong>3 minutes</strong>. If you did not request this, please ignore this email.</p>
         </div>
         `,
-    }
+    };
 
-    await this.transporter.sendMail(mailOptions);
+    await this.sendMailSafe(mailOptions);
   }
 
   async sendAccountDetails(payload: AccountDetailsEmailPayload) {
@@ -56,8 +80,7 @@ class EmailService {
         </div>
         `
     }
-    await this.transporter.sendMail(mailOptions);
-    console.log('email sent')
+    await this.sendMailSafe(mailOptions);
   }
 
   async sendTransactionEmail(payload: TransactionEmailPayload) {
@@ -402,7 +425,7 @@ class EmailService {
     `,
     };
 
-    await this.transporter.sendMail(mailOptions);
+    await this.sendMailSafe(mailOptions);
   }
 }
 
