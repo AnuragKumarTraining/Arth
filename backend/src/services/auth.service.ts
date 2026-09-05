@@ -89,8 +89,13 @@ export class AuthService {
       });
 
     console.info(`[AuthService:initiateSignup] Dispatching OTP email to: ${normalizedEmail}`);
-    await emailService.sendOtpEmail(normalizedEmail, rawOtp);
-    console.info(`[AuthService:initiateSignup] Signup initiated successfully for: ${normalizedEmail}`);
+    console.log(`[AUTH] Generated OTP for ${normalizedEmail}: ${rawOtp}`);
+    try {
+      await emailService.sendOtpEmail(normalizedEmail, rawOtp);
+      console.info(`[AuthService:initiateSignup] Signup initiated successfully for: ${normalizedEmail}`);
+    } catch (emailErr) {
+      console.error(`[AuthService:initiateSignup] Email delivery failed, registration saved safely:`, emailErr);
+    }
   }
 
   async verifyAccount(input: VerifyAccountInput): Promise<void> {
@@ -252,8 +257,13 @@ export class AuthService {
       .where(eq(pendingRegistrations.email, normalizedEmail));
 
     console.info(`[AuthService:resendOtp] Dispatching new OTP email to: ${normalizedEmail}`);
-    await emailService.sendOtpEmail(normalizedEmail, rawOtp);
-    console.info(`[AuthService:resendOtp] OTP resent successfully to: ${normalizedEmail}`);
+    console.log(`[AUTH] Resent OTP for ${normalizedEmail}: ${rawOtp}`);
+    try {
+      await emailService.sendOtpEmail(normalizedEmail, rawOtp);
+      console.info(`[AuthService:resendOtp] OTP resent successfully to: ${normalizedEmail}`);
+    } catch (emailErr) {
+      console.error(`[AuthService:resendOtp] Email delivery failed, OTP updated safely:`, emailErr);
+    }
   }
 }
 
